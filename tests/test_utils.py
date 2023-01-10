@@ -1,8 +1,17 @@
+import os
+import sys
 import unittest
+
 import numpy as np
 import pandas as pd
-import utils
 import testutils as u
+
+script_file_path = os.path.realpath(__file__)
+sys.path.append(
+	os.path.dirname(os.path.dirname(os.path.dirname(script_file_path)))
+)
+
+import gleason_extraction_py as ge
 
 
 class TestUtils(unittest.TestCase):
@@ -18,7 +27,7 @@ class TestUtils(unittest.TestCase):
 				'c': [np.nan, np.nan, np.nan],
 				'warning': [np.nan, np.nan, np.nan]
 				})
-		produced = utils.typed_format_dt_to_standard_format_dt(dt)
+		produced = ge.typed_format_dt_to_standard_format_dt(dt)
 		expected = pd.DataFrame({	
 				'text_id': [0, 0],
 				'obs_id': [1, 3],
@@ -37,7 +46,7 @@ class TestUtils(unittest.TestCase):
 			't': [np.nan, np.nan, np.nan],
 			'c': [np.nan, np.nan, 9]
 			})
-		produced = utils.determine_element_combinations(dt)
+		produced = ge.determine_element_combinations(dt)
 		expected = pd.DataFrame({	
 			'grp': [0.0, 0.0, 0.0],
 			'a': [4, np.nan, np.nan],
@@ -55,7 +64,7 @@ class TestUtils(unittest.TestCase):
 			't': [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
 			'c': [np.nan, np.nan, np.nan, np.nan,np.nan, 9]
 			})
-		produced = utils.determine_element_combinations(dt)
+		produced = ge.determine_element_combinations(dt)
 		expected = pd.DataFrame({	
 			'grp': [0.0, 0.0, 0.0, 0.0 ,1.0 ,2.0],
 			'a': [4, 4, np.nan, np.nan, np.nan, np.nan],

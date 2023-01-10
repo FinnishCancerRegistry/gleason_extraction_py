@@ -1,7 +1,17 @@
-import pandas as pd
-import numpy as np
-import pattern_extraction as pe
+import os
+import sys
 import unittest
+
+import numpy as np
+import pandas as pd
+
+script_file_path = os.path.realpath(__file__)
+sys.path.append(
+	os.path.dirname(os.path.dirname(os.path.dirname(script_file_path)))
+)
+
+import gleason_extraction_py as ge
+
 
 class TestPatternExtraction(unittest.TestCase):
 
@@ -15,7 +25,7 @@ class TestPatternExtraction(unittest.TestCase):
 
 		example_texts = ['primary grade 3','secondary grade 4','primary grade 5 secondary grade 3','secondary grade 3 and primary grade 5, therefore gleason score 8','primary grade 5 gleason score 8'] 
 
-		result_df = pe.extract_context_affixed_values(example_texts, pattern_dt_example)
+		result_df = ge.extract_context_affixed_values(example_texts, pattern_dt_example)
 		self.assertEqual(result_df.shape[0], 9)
 		self.assertTrue(np.array_equal(result_df['pos'].values, np.array([0,1,2,2,3,3,3,4,4])))
 		self.assertTrue(np.array_equal(result_df['pattern_name'].values, np.array(['a', 'b', 'a', 'b', 'b','a','c','a','c'])))
@@ -33,7 +43,7 @@ class TestPatternExtraction(unittest.TestCase):
 
 		test_text = ['second most prevalent grade 3']
 
-		result_df = pe.extract_context_affixed_values(test_text, test_pattern_dt)
+		result_df = ge.extract_context_affixed_values(test_text, test_pattern_dt)
 		self.assertTrue(np.array_equal(result_df['value'].values, np.array(['3'])))
 
 

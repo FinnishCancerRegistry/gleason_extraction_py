@@ -1,10 +1,19 @@
-import gleason_extraction as ge
-import pandas as pd
-import numpy as np
-import unittest
-import re
 import os
+import re
+import sys
+import unittest
+
+import numpy as np
+import pandas as pd
 import testutils as u
+
+script_file_path = os.path.realpath(__file__)
+sys.path.append(
+	os.path.dirname(os.path.dirname(os.path.dirname(script_file_path)))
+)
+
+import gleason_extraction_py as ge
+
 
 class TestGleasonExtraction(unittest.TestCase):
 	 
