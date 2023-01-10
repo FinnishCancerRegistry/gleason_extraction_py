@@ -31,15 +31,15 @@ class TestGleasonExtraction(unittest.TestCase):
 		self.assertTrue(diff.empty, msg = "Did not extract expected values.\n{0}\nLeft_only: expected, but not found.\nRight_only: found, but not expected""".format(diff))
 
 
-	@unittest.skipIf((not os.path.exists("input.csv") and not os.path.exists("output.csv")), reason="validation data is missing")
+	@unittest.skipIf((not os.path.exists("tests/data/input.csv") and not os.path.exists("tests/data/output.csv")), reason="validation data is missing")
 	#@unittest.skip
 	def test_validation(self):
-		input = pd.read_csv("input.csv") #columns: text_id,text
+		input = pd.read_csv("tests/data/input.csv") #columns: text_id,text
 		input = input.groupby("text_id").first().reset_index() # delete duplicates
 		texts = list(input.text)
 		text_ids = list(input.text_id)
 		extracted = ge.extract_gleason_scores(texts, text_ids)
-		expected = pd.read_csv("output.csv") #columns: text_id,a,b,c
+		expected = pd.read_csv("tests/data/output.csv") #columns: text_id,a,b,c
 		diff = u.compare_dts(expected, extracted, ["text_id","a", "b", "c"])
 		self.assertTrue(diff.empty, msg = "Did not extract the same values as the validated program.\n{0}\nLeft_only:gleason found by the validated program only.\nRight_only: gleason found by this program only""".format(diff))
 		
