@@ -9,6 +9,13 @@ Contents:
 - `src/utils.py`: general utility functions.
 - `tests/*`: unit tests.
 
+To use this code, you can simply add this project as a sub-dir of your
+project and import the sub-dir with e.g.
+
+```python
+import gleason_extraction_py as ge
+```
+
 ## Extraction process description
 
 This was written to make the extraction process understandable. Mainly what
