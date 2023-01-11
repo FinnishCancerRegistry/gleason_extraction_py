@@ -49,7 +49,7 @@ text are extracted from text (again, we hate false positives).
 The regular expressions have been written for Finnish and Swedish texts in mind,
 but they can be modified to work better for e.g. English texts by adding English
 expressions into the various whitelists. A few English
-expressions have already been included --- English language is rare in our
+expressions have already been included --- English language was rare in Finnish our
 text data.
 
 Before the actual extraction is performed in `extract_gleason_scores`,
