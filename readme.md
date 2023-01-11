@@ -4,9 +4,10 @@ Gleasonextraction is a python tool to extract gleason scores from pathology text
 
 Contents:
 
-- `gleason_extraction.py`: the regular expressions and how they are used are defined here.
-- `pattern_extraction.py`: more general pattern extraction functions.
-- `utils.py`: general utility functions.
+- `src/gleason_extraction.py`: the regular expressions and how they are used are defined here.
+- `src/pattern_extraction.py`: more general pattern extraction functions.
+- `src/utils.py`: general utility functions.
+- `tests/*`: unit tests.
 
 ## Extraction process description
 
