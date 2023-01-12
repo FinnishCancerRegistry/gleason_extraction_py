@@ -109,13 +109,13 @@ two elements).
 
 Finally, the product of the extraction process is a table with columns
 
-    - `text_id` (int64): original text_id
-    - `obs_id` (int64): original text_id extended with the value, 
+- `text_id` (int64): original text_id
+- `obs_id` (int64): original text_id extended with the value, 
           which tells the order of appearance in the text. E.g for text_id 1, obs_id is 1001
-    - `a` (int/NoneType): Most prevalent gleason value
-    - `b` (int/NoneType): Second most prevalent gleason value
-    - `t` (int/NoneType): Tertiary gleason value
-    - `c` (int/NoneType): Gleason score
-    - `warning` (str): Warning message (match type does not match extracted values, gleason score does not match primary and secondary values)
+- `a` (int/NoneType): Most prevalent gleason value
+- `b` (int/NoneType): Second most prevalent gleason value
+- `t` (int/NoneType): Tertiary gleason value
+- `c` (int/NoneType): Gleason score
+- `warning` (str): Warning message (match type does not match extracted values, gleason score does not match primary and secondary values)
 
 This concludes the extraction process.
