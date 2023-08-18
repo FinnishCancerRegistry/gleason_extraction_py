@@ -589,9 +589,10 @@ def parse_gleason_value_string_elements(value_strings, match_types):
 			`t` (int/float): tertiary gleason
 			`c` (int/float): scoresum
 			`warning` (str): warning message
-		int/float: non-nan values int, nan-values float
 
-		The rows are in the same order as `value_strings`.	
+		The rows are in the same order as `value_strings`. Missing values
+		are denoted by np.nan, which is always a float, though if a column
+		has no missing values then you have an int column.
 	"""
 	
 
@@ -620,6 +621,10 @@ def parse_gleason_value_string_elements(value_strings, match_types):
 				dt["value"] = dt["value"].astype('int') # can run pivot_table for numericals only
 				pattern_names_extracted = np.unique(dt.pattern_name)
 				pattern_names_instructions = instructions[0]['pattern_name']
+				# note that pivoting causes here int "value" column values
+				# to be turned into float values when there are any missing
+				# values in the resulting value columns. this is because
+				# missing values are denoted with np.nan which is a float.
 				dt = dt.pivot_table(index=["pos","duplicate_id"], columns="pattern_name", values= "value").rename_axis(None, axis=1).reset_index()
 				dt.drop("duplicate_id", axis=1, inplace = True) # not needed anymore				
 				dt['pos'] = dt.pos.apply(lambda x : idx_list[x])
