@@ -1,6 +1,6 @@
 # Gleason score extraction at the Finnish Cancer Registry
 
-Gleasonextraction is a python tool to extract gleason scores from pathology texts. This is python implementation of the original [research project written in R](https://github.com/WetRobot/gleason_extraction) written the peer-reviewed study "Accurate pattern-based extraction of complex Gleason score expressions from pathology reports" (https://doi.org/10.1016/j.jbi.2021.103850).
+Gleasonextraction is a python tool to extract gleason scores from pathology texts. This is python implementation of the original [research project written in R](https://github.com/WetRobot/gleason_extraction) written for the peer-reviewed study "Accurate pattern-based extraction of complex Gleason score expressions from pathology reports" (https://doi.org/10.1016/j.jbi.2021.103850).
 
 Contents:
 
