@@ -44,17 +44,24 @@ class TestGleasonExtraction(unittest.TestCase):
 		self.assertTrue(diff.empty, msg = "Did not extract the same values as the validated program.\n{0}\nLeft_only:gleason found by the validated program only.\nRight_only: gleason found by this program only""".format(diff))
 		
 	def test_parse_gleason_value_string_elements(self):
-		value_strings = ["3 + 4 = 7", "7", "3 + 4 (7)", "7 (3 + 4)", "3 + 4", "3 + 4 gleason score 7", "3 + 4 (+5) = 7", "3 + 4 (+5)", "3+4+5", "4+3+5, gleason score 7", "5 4", "3 + 4 / 4 + 3", "3"]
-		match_types = ["a + b = c", "c", "a + b = c", "a + b = c", "a + b", "a + b = c", "a + b + t = c", "a + b + t", "a + b + t", "a + b + t = c", "a", "a + b", "kw_all_a"]
-		produced = ge.parse_gleason_value_string_elements(value_strings, match_types)
+		data = pd.DataFrame({
+			"value_string": ["3 + 4 = 7", "7", "3 + 4 (7)", "7 (3 + 4)", "3 + 4", "3 + 4 gleason score 7", "3 + 4 (+5) = 7", "3 + 4 (+5)", "3+4+5", "4+3+5, gleason score 7", "5 4", "3 + 4 / 4 + 3", "3"],
+			"match_type": ["a + b = c", "c", "a + b = c", "a + b = c", "a + b", "a + b = c", "a + b + t = c", "a + b + t", "a + b + t", "a + b + t = c", "a", "a + b", "kw_all_a"]
+		})
+		produced = ge.parse_gleason_value_string_elements(
+			data["value_string"],
+			data["match_type"]
+		)
 		expected = pd.DataFrame({	
-						'pos': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12],
-						'a': [3, np.nan, 3, 3, 3, 3, 3, 3, 3, 4, 5, 4, 3, 4, 3],
-						'b': [4, np.nan, 4, 4, 4, 4, 4, 4, 4, 3, np.nan, np.nan, 4, 3, 3],
-						't': [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 5, 5, 5, 5, np.nan, np.nan, np.nan, np.nan, np.nan],
-						'c': [7, 7, 7, 7, np.nan, 7, 7, np.nan, np.nan, 7, np.nan, np.nan, np.nan, np.nan, np.nan]
-						})
+			'pos': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12],
+			'a': [3, np.nan, 3, 3, 3, 3, 3, 3, 3, 4, 5, 4, 3, 4, 3],
+			'b': [4, np.nan, 4, 4, 4, 4, 4, 4, 4, 3, np.nan, np.nan, 4, 3, 3],
+			't': [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 5, 5, 5, 5, np.nan, np.nan, np.nan, np.nan, np.nan],
+			'c': [7, 7, 7, 7, np.nan, 7, 7, np.nan, np.nan, 7, np.nan, np.nan, np.nan, np.nan, np.nan]
+		})
 		diff = u.compare_dts(expected, produced, ["pos", "a", "b", "t", "c"])
+		if not diff.empty:
+			import pdb; pdb.set_trace()
 		self.assertTrue(diff.empty, msg = "\n{0}\nLeft_only:expected\nRight_only: extracted""".format(diff))
 
 	def test_whitelist_to_whitelist_regex(self):
