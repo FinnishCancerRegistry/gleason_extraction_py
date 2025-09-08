@@ -2,19 +2,17 @@ import os
 import regex as re
 import sys
 import unittest
-
 import numpy as np
 import pandas as pd
-import tests.unit_test_utils as u
 
 script_file_path = os.path.realpath(__file__)
 sys.path.append(
-	os.path.dirname(os.path.dirname(os.path.dirname(script_file_path)))
+	os.path.dirname(script_file_path)
 )
+import unit_test_utils as u
 sys.path.append(
 	os.path.dirname(os.path.dirname(script_file_path))
 )
-
 from src import gleason_extraction as ge
 from src import gleason_extraction_regexes as ger
 
