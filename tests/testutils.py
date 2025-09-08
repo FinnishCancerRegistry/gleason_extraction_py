@@ -1,4 +1,6 @@
-import re
+# import re
+import regex as re
+import numpy as np
 
 # utility functions for tests
 
@@ -15,7 +17,16 @@ def compare_dts(dt1, dt2, cols):
 		DataFrame: Empty Dataframe if dt:s equal by tested columns 
 	"""
 	comparison_dt = dt1.merge(dt2, indicator=True, how='outer', on = cols)
-	diff = comparison_dt[comparison_dt["_merge"] != "both"]
+	diff = comparison_dt.loc[comparison_dt["_merge"] != "both", :]
+	diff = diff.copy()
+	diff["_merge"] = diff["_merge"].astype("str")
+	diff.loc[diff["_merge"] == "left_only", "_merge"] = "exp_only"
+	diff.loc[diff["_merge"] == "right_only", "_merge"] = "obs_only"
+	sort_col_nms = np.intersect1d(["text_id", "grp", "_merge"], diff.columns)
+	if diff.shape[0] > 0 and len(sort_col_nms) > 0:
+		diff.sort_values(by=sort_col_nms, inplace=True)
+	diff.rename(columns={"_merge": "source"}, inplace=True)
+	diff.reset_index(inplace=True, drop = True)
 	return diff
 
 
