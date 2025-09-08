@@ -1,12 +1,11 @@
 import os
-# import re
 import regex as re
 import sys
 import unittest
 
 import numpy as np
 import pandas as pd
-import testutils as u
+import tests.unit_test_utils as u
 
 script_file_path = os.path.realpath(__file__)
 sys.path.append(

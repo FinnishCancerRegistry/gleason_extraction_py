@@ -1,4 +1,3 @@
-# import re
 import regex as re
 import numpy as np
 
