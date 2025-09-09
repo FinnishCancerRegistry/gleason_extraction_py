@@ -143,7 +143,7 @@ def multiple_alternative_value_matches(x):
 # grade / score values ----------------------------------------------------
 # `score_a_or_b` defines what kinds of grades (A and B in A + B = C) are 
 # extracted.
-score_a_or_b = "[2-5]"
+score_a_or_b = "[3-5]"
 # `score_c` defines what kinds of scoresums (C in A + B = C) are extracted.
 score_c = "(10|[6-9])"
 
@@ -476,7 +476,7 @@ def component_parsing_instructions_by_match_type():
 	Returns:
 		dict: keys(str): pattern_name. values(list): dataframe, number of max tries per pattern
 	"""
-	re_abt = "[2-5]"
+	re_abt = "[3-5]"
 	re_c = "([6-9]|10)"
 	re_plus = "[^0-9+,]?[+,][^0-9+,]?"
 	re_mask_prefix = "_"
