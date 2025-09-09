@@ -64,9 +64,8 @@ def extract_gleason_scores(
 		Runs the extraction itself, parses and formats results.
 
 	Args:
-		`texts` (list(str)): texts to process
-		`text_ids` (list(int)): identifies each text; will be retained in output
-		`format` (list(str)): Defaults to "standard".
+		`texts` (ty.Iterable[str]): texts to process
+		`text_ids` (ty.Iterable[int]): identifies each text; will be retained in output
 		`pattern_dt` (DataFrame, optional): Defaults to fcr_pattern_dt(). With columns
 			`pattern_name` (str): one name per pattern
 			`match_type` (str): value combination to look for
@@ -97,7 +96,7 @@ def extract_gleason_scores(
 	Non-nan values are int and nan values None.
 	"""
 
-	logger.info('Start gleason extraction')
+	logger.info('extract_gleason_scores called')
 	try:
 		if not isinstance(texts, ty.Iterable):
 			raise TypeError("Arg `texts` must be Iterable")
@@ -113,7 +112,7 @@ def extract_gleason_scores(
 		logger.exception(e)
 		raise
 
-	logger.info('Extract values with context prefixes and suffixes')
+	logger.info('extract_gleason_scores starts loop over regexes')
 	out : dict[str, list[int | str | None] | pd.Series] = { # type: ignore
 		"text_id": [],
 		"obs_id": [],
@@ -126,7 +125,11 @@ def extract_gleason_scores(
 	}
 
 	patterns = list(map(re.compile, pattern_dt["full_pattern"]))
+	i = 0
 	for text, text_id in zip(texts, text_ids):
+		i += 1
+		assert isinstance(text, str),\
+			"The %i'th text was not a string but of type `%s`" % (i, str(type(text)))
 		n_extractions = 0
 		text = prepare_text(text)
 		for pattern_no in range(len(patterns)):
@@ -148,6 +151,8 @@ def extract_gleason_scores(
 	out : pd.DataFrame = pd.DataFrame(out) # type: ignore
 	out.sort_values(by=["text_id", "start"], inplace=True)
 	out.reset_index(drop=True, inplace=True)
+
+	logger.info('extract_gleason_scores starts combining any oprhan values')
 	is_orphan = out.loc[:, ['a','b','t','c']].notnull().sum(axis=1) == 1
 	if is_orphan.sum() > 0:
 		out_list : list[pd.DataFrame] = [out.loc[~is_orphan, :]]
@@ -177,4 +182,5 @@ def extract_gleason_scores(
 	out.sort_values(by=["text_id", "obs_id"], inplace=True)
 	out.reset_index(inplace=True, drop=True)
 	out["warning"] = pd.Series(None, dtype="string")
+	logger.info('extract_gleason_scores finished')
 	return out
