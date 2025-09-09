@@ -471,14 +471,14 @@ def prepare_text(x):
 
 
 
-def component_parsing_instructions_by_match_type():
+def component_parsing_instructions_by_match_type() -> dict[str, list[pd.DataFrame | int]]:
 	"""
 	Returns:
 		dict: keys(str): pattern_name. values(list): dataframe, number of max tries per pattern
 	"""
 	re_abt = "[3-5]"
 	re_c = "([6-9]|10)"
-	re_plus = "[^0-9+,]?[+,][^0-9+,]?"
+	re_plus = "[^0-9+,(]?[+,][^0-9+,]?"
 	re_mask_prefix = "_"
 	re_nonmask_prefix = "(^|[^_])"
 	re_nonmask_nonplus_prefix = "(^|[^_+])"
@@ -544,16 +544,19 @@ def component_parsing_instructions_by_match_type():
 		"t": [t_dt, 10]
 	}
 
-
-
-def parse_gleason_value_string_elements(value_strings, match_types):
+def parse_gleason_value_string_elements(
+		value_strings : list[str] | pd.Series,
+		match_types : list[str] | pd.Series
+	) -> pd.DataFrame:
 	"""Parse Gleason Value Strings.
 	
 	Separate elements of the Gleason score (A, B, C, T) from strings extracted from text.
 
 	Args:
-		`value_strings` (list(str)): strings extracted from text containing (only) components of the Gleason score
-		`match_types` (list(str)): each `value_strings` elements must have a corresponding match type;
+		`value_strings` (list[str] | pd.Series):
+			Strings extracted from text containing (only) components of the Gleason score
+		`match_types` (list[str] | pd.Series):
+			Each `value_strings` elements must have a corresponding match type;
 			e.g. match type `"a + b = c"` is handled differently than match type `"c"`
 
 	Function  works as follows:
@@ -610,11 +613,11 @@ def parse_gleason_value_string_elements(value_strings, match_types):
 	match_type_set = set(instructions_by_match_type.keys()).intersection(set(match_types))
 	
 	for match_type in match_type_set:
-		instructions = instructions_by_match_type.get(match_type)
+		instructions : list[pd.DataFrame | int] = instructions_by_match_type.get(match_type) # type: ignore
 		idx_list = [idx for idx, element in enumerate(match_types) if element == match_type]
 		if (len(idx_list) > 0):
 			logger.info("Start processing `{match_type}`".format(match_type = match_type))
-			text_list = [value_strings[i] for i in idx_list]
+			text_list = [re.sub("[()]", "", value_strings[i]) for i in idx_list] # type: ignore
 			dt = pattern_extraction.extract_context_affixed_values(text_list, pattern_dt = instructions[0], n_max_tries_per_pattern = instructions[1])
 			if not dt.empty:
 				dt["duplicate_id"] = dt.groupby(["pos", "pattern_name"]).cumcount()+1 # make an unique id for a combinaiton of 'pos' and 'pattern_name'
@@ -735,6 +738,9 @@ def extract_gleason_scores(texts, text_ids, format = ["standard", "typed"][0], p
 	parsed_dt["text_id"] = parsed_dt["pos"].map(text_dict)
 	obs_dict = dict(zip(extr_dt.index, extr_dt.obs_id))
 	parsed_dt["obs_id"] = parsed_dt["pos"].map(obs_dict)
+	for value_col_nm in ["a", "b", "t", "c"]:
+		if not value_col_nm in parsed_dt.columns:
+			parsed_dt[value_col_nm] = np.nan
 	parsed_dt = parsed_dt[~((~parsed_dt.a.isin([2,3,4,5,np.nan])) | (~parsed_dt.b.isin([2,3,4,5,np.nan])) | (~parsed_dt.t.isin([2,3,4,5,np.nan])) | (~parsed_dt.c.isin([4,5,6,7,8,9,10,np.nan])))]
 	if (format == "standard"):
 		parsed_dt["orig_obs_id"] = parsed_dt.obs_id
