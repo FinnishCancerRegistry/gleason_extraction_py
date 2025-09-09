@@ -57,27 +57,22 @@ def prepare_text(x):
 def extract_gleason_scores(
 		texts : ty.Iterable[str],
 		text_ids : ty.Iterable[int],
-		pattern_dt : pd.DataFrame = ger.fcr_pattern_dt()
+		patterns : ty.Iterable[str | re.Pattern] = ger.fcr_pattern_dt()["full_pattern"]
 	):
 	"""Extract Gleason Scores.
 
 		Runs the extraction itself, parses and formats results.
 
 	Args:
-		`texts` (ty.Iterable[str]): texts to process
-		`text_ids` (ty.Iterable[int]): identifies each text; will be retained in output
-		`pattern_dt` (DataFrame, optional): Defaults to fcr_pattern_dt(). With columns
-			`pattern_name` (str): one name per pattern
-			`match_type` (str): value combination to look for
-			`prefix` (str): regex; context prefix for value
-			`value` (str): regex; the value itself
-			`suffix` (str): regex; context suffix for value
-			`full_pattern` (str): regex; prefix + value + suffix
+		`texts` (ty.Iterable[str]):
+			Texts to process
+		`text_ids` (ty.Iterable[int]):
+			Identifies each text; will be retained in output
+		`patterns` (ty.Iterable[str | re.Pattern])
+			Each element is passed to `regex.compile`.
 
 	Raises:
 		ValueError: Number of texts and text ids have to match
-		ValueError: Format needs to be either "standard" or "typed"
-		ValueError: Each match type in pattern_dt have to exist in instructions dict as well
 		ValueError: text ids must be unique
 
 	Returns:
@@ -85,15 +80,12 @@ def extract_gleason_scores(
 			`text_id` (Int64): original text_id
 			`obs_id` (Int64): original text_id extended with the value, 
 				which tells the order of appearance in the text. E.g for text_id 1, obs_id is 1001
-			`a` (Int64): Most prevalent gleason value
-			`b` (Int64): Second most prevalent gleason value
-			`t` (Int64): Tertiary gleason value
-			`c` (Int64): Gleason score
-			`warning` (str): Warning message (match type does not match extracted values, gleason score does not match primary and secondary values)
-	In `standard` format, gleason elements are combined so that possible abc values of one component are at the same row.
-	Else output contains columns `combination_id`,`value_type`, `value` to link
-	values to combinations to texts.
-	Non-nan values are int and nan values None.
+			`a` (Int64): Most prevalent (primary) grade value
+			`b` (Int64): Second most prevalent (secondary) grade value
+			`t` (Int64): Third most common (tertiary) grade value
+			`c` (Int64): Gleason scoresum
+			`warning` (str|None): Always None. This column only included for
+			backwards compatibility.
 	"""
 
 	logger.info('extract_gleason_scores called')
@@ -124,16 +116,15 @@ def extract_gleason_scores(
 		"stop": []
 	}
 
-	patterns = list(map(re.compile, pattern_dt["full_pattern"]))
-	i = 0
+	compiled_patterns = list(map(re.compile, patterns))
 	for text, text_id in zip(texts, text_ids):
-		i += 1
 		assert isinstance(text, str),\
-			"The %i'th text was not a string but of type `%s`" % (i, str(type(text)))
+			"The text with `text_id = %i` was not a string but of type `%s`"\
+				% (text_id, str(type(text)))
 		n_extractions = 0
 		text = prepare_text(text)
-		for pattern_no in range(len(patterns)):
-			for m in patterns[pattern_no].finditer(text):
+		for pattern_no in range(len(compiled_patterns)):
+			for m in compiled_patterns[pattern_no].finditer(text):
 				n_extractions += 1
 				out["text_id"].append(text_id)
 				gd = m.groupdict()
@@ -148,7 +139,7 @@ def extract_gleason_scores(
 				text = text[:ms[0]] + "_" * (ms[1] - ms[0]) + text[ms[1]:]
 	for int_col_nm in ["text_id", "obs_id", "a", "b", "t", "c"]:
 		out[int_col_nm] = pd.Series(out[int_col_nm], dtype="Int64")
-	out : pd.DataFrame = pd.DataFrame(out) # type: ignore
+	out : pd.DataFrame = pd.DataFrame(out)
 	out.sort_values(by=["text_id", "start"], inplace=True)
 	out.reset_index(drop=True, inplace=True)
 
