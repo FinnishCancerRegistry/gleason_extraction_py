@@ -608,10 +608,9 @@ def parse_gleason_value_string_elements(
 		logger.exception(e)
 		raise
 
-	parsed_dt = None
 	instructions_by_match_type = component_parsing_instructions_by_match_type()
 	match_type_set = set(instructions_by_match_type.keys()).intersection(set(match_types))
-	
+	parsed_dt_list = []	
 	for match_type in match_type_set:
 		instructions : list[pd.DataFrame | int] = instructions_by_match_type.get(match_type) # type: ignore
 		idx_list = [idx for idx, element in enumerate(match_types) if element == match_type]
@@ -649,12 +648,14 @@ def parse_gleason_value_string_elements(
 					if match_type_mask.any():
 						dt.loc[match_type_mask, 'warning'] = dt.loc[match_type_mask, 'warning'].apply(lambda x: x + '||' + match_type_mismatch_warning if x else match_type_mismatch_warning)
 				
-				if parsed_dt is None:
-					parsed_dt = dt
-				else:
-					parsed_dt = pd.concat([parsed_dt, dt], ignore_index = True)	
-
-	parsed_dt['pos'] = parsed_dt['pos'].astype('int')				
+				if dt.shape[0] > 0:
+					parsed_dt_list.append(dt)
+	if len(parsed_dt_list) == 0:
+		parsed_dt = pd.DataFrame(columns = ["pos", "value_string", "match_type", "a", "b", "t", "c", "warning"])
+	else:
+		parsed_dt = pd.concat(parsed_dt_list, ignore_index=True)
+	del parsed_dt_list
+	parsed_dt['pos'] = parsed_dt['pos'].astype('int')
 
 	# kw_all_a implies a == b, but at this point b is missing.
 	kw_all_a_mask = (parsed_dt["match_type"] == "kw_all_a")

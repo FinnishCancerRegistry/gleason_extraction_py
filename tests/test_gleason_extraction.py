@@ -17,9 +17,15 @@ import gleason_extraction_py as ge
 
 class TestGleasonExtraction(unittest.TestCase):
 	 
+	def test_extract_gleason_scores_on_empty_texts(self):
+		text_example = ["", "asdf"] 
+		text_ids = list(range(len(text_example)))
+		extracted = ge.extract_gleason_scores(text_example, text_ids)
+		self.assertTrue(extracted.empty)
+
 	def test_extract_gleason_scores(self):
-		text_example = ["gleason 4 + 4 = gleason 8", "gleason 8", "gleason 4 + 4"] 
-		text_ids= [0, 1, 2]
+		text_example = ["gleason 4 + 4 = gleason 8", "gleason 8", "gleason 4 + 4", "", "asdf"] 
+		text_ids = list(range(len(text_example)))
 		extracted = ge.extract_gleason_scores(text_example, text_ids)
 		expected = pd.DataFrame({
 								'text_id': [0, 1, 2],	
