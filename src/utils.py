@@ -13,7 +13,7 @@ import logs
 logger = logs.logging.getLogger('utils')
 
 
-def normalise_text(x):
+def normalise_text(x : str) -> str:
 	x = re.sub("\\n|\\r", " ", x)
 	x = re.sub("[: ]{1,}", " ", x)
 	x = re.sub("\\.{2,}", " ", x)
@@ -30,7 +30,10 @@ def normalise_text(x):
 	return x
 
 
-def determine_element_combinations(dt, n_max_each = 5):
+def determine_element_combinations(
+		dt : pd.DataFrame,
+		n_max_each : int = 6
+	) -> pd.DataFrame:
 	"""Combinations of Gleason Score Elements
 
 	Identify Gleason score elements that belong together.
@@ -143,7 +146,9 @@ def determine_element_combinations(dt, n_max_each = 5):
 
 
 
-def typed_format_dt_to_standard_format_dt(dt):
+def typed_format_dt_to_standard_format_dt(
+		dt : pd.DataFrame
+	) -> pd.DataFrame:
 	"""Reformat Gleason Score Components
 
 	Combine individual Gleason components (A, B, T, C) into Gleason scores (A + B (+T) = C).
@@ -237,13 +242,17 @@ def typed_format_dt_to_standard_format_dt(dt):
 		wh_last_in_seq_set = wh_last_in_seq_set[wh_last_in_seq_set >= 0]
 		elem_dt[".__processing_grp"] = np.nan
 		# create temporary groups of observations
+		elem_dt.reset_index(inplace=True, drop=True)
 		for l in range(len(wh_first_in_seq_set)):
 			elem_dt.loc[(elem_dt.index >= wh_first_in_seq_set[l]) & (elem_dt.index <= wh_last_in_seq_set[l]), ".__processing_grp"] = l
+		
 		elem_dt[".__processing_grp"] = elem_dt.groupby(["text_id", ".__processing_grp"]).ngroup()
-		elem_dt = elem_dt.groupby(".__processing_grp", group_keys = False).apply(lambda x : determine_element_combinations(x, n_max_each = 6))
+		tmp = elem_dt.groupby(".__processing_grp", group_keys=False).apply(determine_element_combinations, include_groups=False)
+		tmp.reset_index(inplace=True, drop=True)
+		elem_dt.loc[:, ["grp", "grp_type"]] = tmp.loc[:, ["grp", "grp_type"]]
 		elem_dt[".__processing_grp"] = elem_dt.groupby(["grp", ".__processing_grp"]).ngroup()
 
-		def combine_groups(dt):
+		def combine_groups(dt : pd.DataFrame) -> pd.DataFrame:
 			sub_dt = dt.copy().reset_index(drop=True)
 			a  = sub_dt[sub_dt["a"].notnull()]["a"].reset_index(drop=True)
 			b  = sub_dt[sub_dt["b"].notnull()]["b"].reset_index(drop=True)
@@ -263,7 +272,7 @@ def typed_format_dt_to_standard_format_dt(dt):
 			sub_dt = sub_dt[0:n]
 			sub_dt[['a','b','t','c']] = values
 			return sub_dt
-		elem_dt = elem_dt.groupby(".__processing_grp", group_keys = False).apply(combine_groups)
+		elem_dt = elem_dt.groupby(".__processing_grp", group_keys = False).apply(combine_groups, include_groups=False)
 		elem_dt = elem_dt.sort_values(['text_id','obs_id'], ignore_index = True)
 	out = pd.concat([elem_dt, dt[~is_single_elem_match.match_type]], ignore_index = True)
 	out = out[['text_id', 'obs_id', 'a', 'b', 't', 'c', 'warning']]

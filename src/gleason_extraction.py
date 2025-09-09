@@ -605,7 +605,7 @@ def parse_gleason_value_string_elements(value_strings, match_types):
 		logger.exception(e)
 		raise
 
-	parsed_dt = pd.DataFrame(columns = ["pos", "value_string", "match_type", "a", "b", "t", "c", "warning"])
+	parsed_dt = None
 	instructions_by_match_type = component_parsing_instructions_by_match_type()
 	match_type_set = set(instructions_by_match_type.keys()).intersection(set(match_types))
 	
@@ -646,7 +646,10 @@ def parse_gleason_value_string_elements(value_strings, match_types):
 					if match_type_mask.any():
 						dt.loc[match_type_mask, 'warning'] = dt.loc[match_type_mask, 'warning'].apply(lambda x: x + '||' + match_type_mismatch_warning if x else match_type_mismatch_warning)
 				
-				parsed_dt = pd.concat([parsed_dt, dt], ignore_index = True)	
+				if parsed_dt is None:
+					parsed_dt = dt
+				else:
+					parsed_dt = pd.concat([parsed_dt, dt], ignore_index = True)	
 
 	parsed_dt['pos'] = parsed_dt['pos'].astype('int')				
 
