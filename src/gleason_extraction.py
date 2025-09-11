@@ -17,7 +17,8 @@ logger = logs.logging.getLogger('gleason_extraction') # type: ignore
 def extract_gleason_scores(
 		texts : ty.Iterable[str],
 		text_ids : ty.Iterable[int],
-		patterns : ty.Iterable[str | re.Pattern] = ger.fcr_pattern_dt()["full_pattern"]
+		patterns : ty.Iterable[str | re.Pattern] = ger.fcr_pattern_dt()["full_pattern"],
+		match_types : None | ty.Iterable[str] = ger.fcr_pattern_dt()["match_type"]
 	):
 	"""Extract Gleason Scores.
 
@@ -28,8 +29,10 @@ def extract_gleason_scores(
 			Texts to process
 		`text_ids` (ty.Iterable[int]):
 			Identifies each text; will be retained in output
-		`patterns` (ty.Iterable[str | re.Pattern])
+		`patterns` (ty.Iterable[str | re.Pattern]):
 			Each element is passed to `regex.compile`.
+		`match_types` (None | ty.Iterable[str]):
+			If not `None`, must be same length as `patterns`. Output
 
 	Raises:
 		ValueError: Number of texts and text ids have to match
@@ -44,8 +47,13 @@ def extract_gleason_scores(
 			`b` (Int64): Second most prevalent (secondary) grade value
 			`t` (Int64): Third most common (tertiary) grade value
 			`c` (Int64): Gleason scoresum
-			`warning` (str|None): Always None. This column only included for
-			backwards compatibility.
+			`warning` (str|None):
+				May contain a warning if the `match_types` element of the correspoding
+				`patterns` element that was used to extract the values in the row
+				do not match with what was actually extracted. For instance if for some
+				reason the `match_types` element was `"a + b = c"` but only `a` and `b`
+				were extracted then this column will contain a warning about that.
+			  
 	"""
 
 	logger.info('extract_gleason_scores called')
@@ -73,17 +81,20 @@ def extract_gleason_scores(
 		"t": [],
 		"c": [],
 		"start": [],
-		"stop": []
+		"stop": [],
+		"match_type": []
 	}
 
 	value_type_space = ["A", "B", "T", "C"]
 	compiled_patterns = list(map(re.compile, patterns))
+	if match_types is None:
+		match_types : list[None | str] = [None] * len(compiled_patterns)
 	for text, text_id in zip(texts, text_ids):
 		assert isinstance(text, str),\
 			"The text with `text_id = %i` was not a string but of type `%s`"\
 				% (text_id, str(type(text)))
 		text = geut.prepare_text(text)
-		for cp in compiled_patterns:
+		for cp, cp_type in zip(compiled_patterns, match_types):
 			for m in cp.finditer(text):
 				ms = m.span()
 				text = text[:ms[0]] + "_" * (ms[1] - ms[0]) + text[ms[1]:]
@@ -125,12 +136,20 @@ def extract_gleason_scores(
 					out["stop"].append(ms[1])
 					out["text_id"].append(text_id)
 					out["obs_id"].append(None)
+					out["match_type"].append(cp_type)
 	value_col_nm_space = [x.lower() for x in value_type_space]
 	for int_col_nm in ["text_id", "obs_id"] + value_col_nm_space:
 		out[int_col_nm] = pd.Series(out[int_col_nm], dtype="Int64")
 	out : pd.DataFrame = pd.DataFrame(out)
 	out.sort_values(by=["text_id", "start", "stop"], inplace=True)
 	out.reset_index(drop=True, inplace=True)
+	out["warning"] = geut.make_column_warning(
+		match_types=out["match_type"],
+		a=out["a"],
+		b=out["b"],
+		t=out["t"],
+		c=out["c"]
+	)
 
 	logger.info('extract_gleason_scores starts combining any orpshan values')
 	is_orphan = out.loc[:, value_col_nm_space].notnull().sum(axis=1) == 1
@@ -146,16 +165,23 @@ def extract_gleason_scores(
 				tmp_df["grp"] = geut.determine_element_combinations(dt = tmp_df)
 				# initially tmp_df contains e.g.
         # a = [4, np.nan], b = [np.nan, 3], start = [8, 27], stop = [19, 39]
-				tmp_df = tmp_df.melt(id_vars=["text_id", "grp"], value_vars=["a", "b", "t", "c", "start", "stop"])
-				# fist i.e. lowest start value kept, and highest stop value
-				tmp_df.loc[np.bitwise_and(tmp_df.duplicated(subset=["grp", "variable"]), tmp_df["variable"] == "start"), "value"] = np.nan
-				tmp_df.loc[np.bitwise_and(tmp_df.duplicated(subset=["grp", "variable"], keep="last"), tmp_df["variable"] == "stop"), "value"] = np.nan
-				tmp_df = tmp_df.loc[tmp_df["value"].notnull(), :]
-				# lambda just to keep the original dtype. default mean produces floats.
-				tmp_df = tmp_df.pivot_table(index = ["text_id", "grp"], columns="variable", values="value", aggfunc=lambda x: x)
-				tmp_df.reset_index(drop=False, inplace=True)
+				tmp_df = tmp_df.groupby(["text_id", "grp"])[
+					["a", "b", "t", "c", "start", "stop", "match_type", "warning"]
+				].aggregate(
+					func={
+						"a": geut.aggregate_column_a_b_t_c,
+						"b": geut.aggregate_column_a_b_t_c,
+						"t": geut.aggregate_column_a_b_t_c,
+						"c": geut.aggregate_column_a_b_t_c,
+						"start": "min",
+						"stop": "max",
+						"match_type": geut.aggregate_column_match_type,
+						"warning": geut.aggregate_column_match_type
+					}
+				)
 				# ok now tmp_df is e.g.
         # a = [4], b = [3], start = [8], stop = [39]
+				tmp_df.reset_index(drop=False, inplace=True)
 			out_list.append(tmp_df)
 		out = pd.concat(out_list)
 	out["obs_id"] = out.groupby("text_id")["text_id"].apply(

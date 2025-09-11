@@ -183,3 +183,100 @@ def prepare_text(x):
 	x = re.sub(re_field_name_gleason_range, " ", x)
 		
 	return re.sub("[ ]+", " ", x)
+
+__regex_expected_value_dict__ = {
+	"a + b = c" : ["a", "b", "c"],
+	"a + b" : ["a", "b"],
+	"a + b + t = c" : ["a", "b", "t", "c"],
+	"a + b + t" : ["a", "b", "t"],
+	"t" : ["t"],
+	"b" : ["b"],
+	"a" : ["a"],
+	"c" : ["c"],
+	"kw_all_a" : ["a", "b"]
+}
+
+def make_warning(
+	match_type : None | str,
+	a : None | int,
+	b : None | int,
+	t : None | int,
+	c : None | int
+) -> str | None:
+	if match_type is None or pd.isna(match_type) or\
+		not match_type in __regex_expected_value_dict__.keys():
+		return None
+	
+	required_value_nms : list[str] = __regex_expected_value_dict__[match_type]
+	value_dict = {
+		"a": a,
+		"b": b,
+		"t": t,
+		"c": c
+	}
+		
+	w = None
+	missing_required_value_nms = []
+	for rvn in required_value_nms:
+		try:
+			if value_dict[rvn] is None or pd.isna(value_dict[rvn]):
+				missing_required_value_nms.append(rvn)
+		except:
+			import ipdb; ipdb.set_trace()
+	if len(missing_required_value_nms) > 0:
+		w = "Pattern was supposed to extract `%s` but did not extract %s" %\
+			(match_type, ", ".join(missing_required_value_nms))
+	
+	return w
+
+import typing as ty
+def make_column_warning(
+	match_types : None | ty.Iterable[str],
+	a : ty.Iterable[int],
+	b : ty.Iterable[int],
+	t : ty.Iterable[int],
+	c : ty.Iterable[int]
+) -> list[None | str]:
+	w = []
+	if match_types is None:
+		if isinstance(a, (list, pd.Series, np.ndarray)):
+			n = len(a)
+		else:
+			n = 0
+			for a_value in a:
+				n += 1
+			w : list[None | str] = [None] * n
+		return w
+	for mt_value, a_value, b_value, t_value, c_value in zip(match_types, a, b, t, c):
+		w.append(make_warning(
+			match_type=mt_value,
+			a=a_value,
+			b=b_value,
+			t=t_value,
+			c=c_value
+		))
+	
+	return(w)
+
+def aggregate_column_warning(warning : pd.Series) -> str | None:
+	is_missing = warning.isnull()
+	if is_missing.all():
+		return(None)
+	return "; ".join(warning[~is_missing])
+
+def aggregate_column_match_type(match_type : pd.Series) -> str | None:
+	is_missing = match_type.isnull()
+	if is_missing.all():
+		return(None)
+	return "; ".join(match_type[~is_missing])
+
+def aggregate_column_a_b_t_c(value_column : pd.Series) -> int | None:
+	is_missing = value_column.isnull()
+	not_missing = ~is_missing
+	if is_missing.all():
+		return(None)
+	elif not_missing.sum() > 1:
+		raise ValueError(
+			"Internal error: Multiple non-na values when combining groups."
+		)
+	return value_column[not_missing].iloc[0]
