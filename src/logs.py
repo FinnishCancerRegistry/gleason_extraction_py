@@ -1,7 +1,6 @@
 import datetime
 import logging
 import os
-import sys
 
 script_dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
