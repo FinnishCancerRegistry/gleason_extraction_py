@@ -1,27 +1,34 @@
 import regex as re
 import numpy as np
+import pandas as pd
 
 # utility functions for tests
 
-def compare_dts(dt1, dt2, cols):
+def compare_dts(
+		dt1 : pd.DataFrame,
+		dt2 : pd.DataFrame,
+		cols : list[str] | None = None
+	):
 	"""This is a helper function for testing
 	It compares dt:s by columns
 
 	Args:
-		dt1 (DataFrame): expected
-		dt2 (DataFrame): produced
-		cols (list(str)): columns to compare against
+		dt1 (pd.DataFrame): expected
+		dt2 (pd.DataFrame): produced
+		cols (list[str] | None): columns to compare against
 
 	Returns:
 		DataFrame: Empty Dataframe if dt:s equal by tested columns 
 	"""
+	if cols is None:
+		cols = dt1.columns.to_list()
 	comparison_dt = dt1.merge(dt2, indicator=True, how='outer', on = cols)
 	diff = comparison_dt.loc[comparison_dt["_merge"] != "both", :]
 	diff = diff.copy()
 	diff["_merge"] = diff["_merge"].astype("str")
 	diff.loc[diff["_merge"] == "left_only", "_merge"] = "exp_only"
 	diff.loc[diff["_merge"] == "right_only", "_merge"] = "obs_only"
-	sort_col_nms = np.intersect1d(["text_id", "grp", "_merge"], diff.columns)
+	sort_col_nms = np.intersect1d(["text_id", "grp", "_merge"], diff.columns).tolist()
 	if diff.shape[0] > 0 and len(sort_col_nms) > 0:
 		diff.sort_values(by=sort_col_nms, inplace=True)
 	diff.rename(columns={"_merge": "source"}, inplace=True)

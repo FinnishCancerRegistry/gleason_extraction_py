@@ -5,46 +5,36 @@ import unittest
 import numpy as np
 import pandas as pd
 
-script_file_path = os.path.realpath(__file__)
-sys.path.append(
-	os.path.dirname(script_file_path)
-)
+test_script_path = os.path.realpath(__file__)
+test_dir_path = os.path.dirname(test_script_path)
+sys.path.append(test_dir_path)
 import unit_test_utils as u
-sys.path.append(
-	os.path.dirname(os.path.dirname(script_file_path))
-)
+root_dir_path = os.path.dirname(test_dir_path)
+sys.path.append(root_dir_path)
 from src import gleason_extraction as ge
+from src import utils as geut
 from src import gleason_extraction_regexes as ger
 
 class TestGleasonExtraction(unittest.TestCase):
+
+	# extraction tests -----------------------------------------------------------
 	 
 	def test_extract_gleason_scores(self):
-		data = pd.DataFrame({
-			"id": list(range(5)),
-			"text": [
-				"gleason 4 + 4 = gleason 8",
-				"gleason 8",
-				"gleason 4 + 4",
-				"gleason primääri 4\ngleason sekundääri 3",
-				"gleason primääri 4\ngleason sekundääri 3\ngleason primääri 3\ngleason sekundääri 4"
-			]
-		})
-		obs = ge.extract_gleason_scores(data["text"], data["id"])
-		exp = pd.DataFrame({
-			'text_id': [0, 1, 2, 3, 4, 4],	
-			'a': [4, np.nan, 4, 4, 4, 3],
-			'b': [4, np.nan, 4, 3, 3, 4],
-			'c': [8, 8, np.nan, np.nan, np.nan, np.nan]
-		}, dtype = "Int64")
-		diff = u.compare_dts(exp, obs, ["text_id","a", "b", "c"])
-		if not diff.empty:
-			print(diff)
-			import pdb; pdb.set_trace()
+		data = pd.read_csv("%s/test_text_data.csv" % test_dir_path)
+		obs = ge.extract_gleason_scores(data["text"], data["text_id"])
+		exp = pd.read_csv(
+			"%s/test_extractions.csv" % test_dir_path,
+			dtype={
+				"text_id": "Int64",
+				"a": "Int64",
+				"b": "Int64",
+				"c": "Int64"
+			}
+		)
+		diff = u.compare_dts(exp, obs, ["text_id", "a", "b", "c"])
 		self.assertTrue(diff.empty)
 
-
 	@unittest.skipIf((not os.path.exists("tests/data/input.csv") and not os.path.exists("tests/data/output.csv")), reason="validation data is missing")
-	#@unittest.skip
 	def test_validation(self):
 		input = pd.read_csv("tests/data/input.csv") #columns: text_id,text
 		input = input.groupby("text_id").first().reset_index() # delete duplicates
@@ -53,10 +43,32 @@ class TestGleasonExtraction(unittest.TestCase):
 		extracted = ge.extract_gleason_scores(texts, text_ids)
 		expected = pd.read_csv("tests/data/output.csv") #columns: text_id,a,b,c
 		diff = u.compare_dts(expected, extracted, ["text_id","a", "b", "c"])
-		if not diff.empty:
-			print(diff)
-			import pdb; pdb.set_trace()
 		self.assertTrue(diff.empty)
+
+	# utility tests --------------------------------------------------------------
+
+	def test_determine_element_combinations_simple(self):
+		dt = pd.DataFrame({	
+			'a': [4, np.nan, np.nan],
+			'b': [np.nan, 5, np.nan],
+			't': [np.nan, np.nan, np.nan],
+			'c': [np.nan, np.nan, 9]
+		}, dtype="Int64")
+		obs = geut.determine_element_combinations(dt)
+		self.assertTrue(np.array_equal(obs, [0, 0, 0]))
+
+	def test_determine_element_combinations(self):
+		dt = pd.DataFrame({	
+			'a': [4, 4, np.nan, np.nan, np.nan, np.nan],
+			'b': [np.nan, np.nan, 3, 4, 5, np.nan],
+			't': [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+			'c': [np.nan, np.nan, np.nan, np.nan,np.nan, 9]
+		}, dtype="Int64")
+		obs = geut.determine_element_combinations(dt)
+		exp = [0, 1, 0, 1, 2, 3]
+		self.assertTrue(np.array_equal(obs, exp))
+
+	# regex tests ----------------------------------------------------------------
 
 	def test_whitelist_to_whitelist_regex(self):
 		wh_regex = ger.whitelist_to_whitelist_regex(["hi", "yo"])

@@ -135,6 +135,7 @@ score_a_b_t = "[3-5]"
 score_c = "(?:10|[6-9])"
 
 score_a = "(?P<A>%s)" % score_a_b_t
+score_a_and_b = "(?P<A_and_B>%s)" % score_a_b_t
 score_b = "(?P<B>%s)" % score_a_b_t
 score_t = "(?P<T>%s)" % score_a_b_t
 score_c = "(?P<C>%s)" % score_c
@@ -320,8 +321,8 @@ def fcr_pattern_dt():
 		whitelist_only_one_kind_regex = word_whitelist_to_word_whitelist_regex(whitelist_only_one_kind, match_count = "+")
 		# `kw_all_*` objects define the (RHS + LHS context and the value) regexes 
    		# for keyword + monograde expressions.
-		kw_all_a_prefix = whitelist_only_one_kind_regex + optional_word_sep + base_gleason_regex +optional_word_sep
-		kw_all_a_value = score_a
+		kw_all_a_prefix = whitelist_only_one_kind_regex + optional_word_sep + base_gleason_regex + optional_word_sep
+		kw_all_a_value = score_a_and_b
 		kw_all_a_suffix = default_regex_suffix
 		
 		# kw_a ---------------------------------------------------------------------

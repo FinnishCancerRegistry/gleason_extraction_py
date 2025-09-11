@@ -32,7 +32,7 @@ def normalise_text(x):
 def determine_element_combinations(
 		dt : pd.DataFrame,
 		n_max_each : int = 5
-	) -> pd.DataFrame:
+	) -> pd.Series:
 	"""Combinations of Gleason Score Elements
 
 	Identify Gleason score elements that belong together.
@@ -83,17 +83,10 @@ def determine_element_combinations(
 		ValueError: There has to be only one value a/b/t/c per row
 		
 	Returns:
-		DataFrame: Table with (at least) columns
-			`a`(Int64): primary Gleason score
-			`b`(Int64): second Gleason score
-			`t`(Int64): tertiary Gleason
-			`c`Int64): Gleason scoresum
-			`grp`(Int64): group, that tells which Gleason score elements belong together
+		pd.Series[pd.Int64DType]: Group indicators, one for each row of `dt`.
 	"""
 
 	try:
-		if dt.columns.isin(['grp','grp_type','type']).any():
-			raise ValueError('Input dt should NOT have columns grp, grp_type or type, as these are added by this function into dt')
 		if not dt.loc[dt[['a','b','t','c']].notnull().sum(axis=1) != 1].empty:
 			raise ValueError('There has to be exactly one non-nan a/b/t/c value per row')
 	except Exception as e:
@@ -115,29 +108,37 @@ def determine_element_combinations(
 		"t",
 		"c"
 	]
-	dt = dt.copy()
 	dt.reset_index(drop=True, inplace=True)
-
-	dt["type"] = pd.Series(None, dtype = "string")
-	for col_nm in ["a", "b", "t", "c"]:
-		dt.loc[dt[col_nm].notnull(), "type"] = col_nm
-	dt["grp"] = pd.Series(np.nan, dtype="Int64")
-
+	groups = pd.Series([None] * dt.shape[0], dtype = "Int64")
+	types = []
+	for i in range(dt.shape[0]):
+		for value_col_nm in ["a", "b", "t", "c"]:
+			tmp = dt[value_col_nm].isnull()
+			try:
+				if not tmp.iloc[i]:
+					types.append(value_col_nm)
+					break
+			except:
+				import IPython; IPython.embed()
+	types = pd.Series(types)
 	n = dt.shape[0]
 	max_grp = 0
-	while (dt["grp"].isnull().any()):
-		wh_first = int(dt.isnull()["grp"].idxmax())
+	while groups.isnull().any():
+		wh_first = int(groups.isnull().idxmax())
 		for i in range(len(allowed_combinations)):
 			break_search = False
-			for n_each in range(n_max_each):
-				candidate = np.repeat(allowed_combinations[i], (n_each + 1))
-				r = list(range(wh_first, (min(n, wh_first  + len(candidate) ))))				
-				if (np.array_equal(np.array(dt.loc[r, "type"]), candidate)):
-					dt.loc[r, "grp"] = max_grp
-					dt.loc[r, "grp_type"] = "".join(candidate)
-					max_grp = max_grp + 1
+			for n_each in range(1, n_max_each + 1):
+				candidate = np.repeat(allowed_combinations[i], n_each)
+				compare_idx = np.arange(wh_first, min(n, wh_first + len(candidate)))
+				if np.array_equal(np.array(types.iloc[compare_idx]), candidate):
+					grp_indicators = np.tile(
+						np.arange(max_grp, max_grp + n_each),
+						len(allowed_combinations[i])
+					)
+					groups.iloc[compare_idx] = grp_indicators
+					max_grp = np.max(grp_indicators) + 1
 					break_search = True
 					break
-			if (break_search):
+			if break_search:
 				break
-	return dt
+	return groups

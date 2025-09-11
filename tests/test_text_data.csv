@@ -1,0 +1,24 @@
+text_id,text
+0,gleason 4 + 4 = gleason 8
+1,gleason 8
+2,gleason 4 + 4
+3,"gleason primääri 4
+gleason sekundääri 3
+"
+4,"gleason primääri 3
+gleason sekundääri 3
+gleason primääri 3
+gleason sekundääri 4
+"
+5,gleason 3 +3/3 +4
+6,gleason 7/8/9
+7,"                             LEFT            RIGHT
+GRADING
+WHO-gradus.................: 2               3
+Gleason-yht.pist. (2-10)...: 6               7
+Yleisin Gleason-lk (1-5)...: 3               4
+2. yleisin Gleason-lk (1-5): 3               3
+
+gleason 3 + 3 / 4 + 3
+"
+8,kokonaan gleason 3

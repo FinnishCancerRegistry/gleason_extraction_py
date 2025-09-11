@@ -116,44 +116,74 @@ def extract_gleason_scores(
 		"stop": []
 	}
 
+	value_type_space = ["A", "B", "T", "C"]
 	compiled_patterns = list(map(re.compile, patterns))
 	for text, text_id in zip(texts, text_ids):
 		assert isinstance(text, str),\
 			"The text with `text_id = %i` was not a string but of type `%s`"\
 				% (text_id, str(type(text)))
-		n_extractions = 0
 		text = prepare_text(text)
-		for pattern_no in range(len(compiled_patterns)):
-			for m in compiled_patterns[pattern_no].finditer(text):
-				n_extractions += 1
-				out["text_id"].append(text_id)
-				gd = m.groupdict()
-				for elem_nm in ["A", "B", "T", "C"]:
-					if elem_nm in gd:
-						out[elem_nm.lower()].append(int(gd[elem_nm]))
-					else:
-						out[elem_nm.lower()].append(None)
+		for cp in compiled_patterns:
+			for m in cp.finditer(text):
 				ms = m.span()
-				out["start"].append(ms[0])
-				out["stop"].append(ms[1])
 				text = text[:ms[0]] + "_" * (ms[1] - ms[0]) + text[ms[1]:]
-	for int_col_nm in ["text_id", "obs_id", "a", "b", "t", "c"]:
+				cd = m.capturesdict()
+				if "A_and_B" in cd.keys() and not cd["A_and_B"] is None:
+					# this handles regexes which capture e.g.
+					# "sample was entirely grade 3", meaning 3 + 3.
+					# from the example above, 3 needs to be extracted by named capture
+					# group `A_and_B`.
+					cd = {
+						"A": cd["A_and_B"],
+						"B": cd["A_and_B"]
+					}
+				# e.g. cd = {"A": [3, 3], "B": [3, 4]} when text was
+				# "gleason 3 + 3 / 3 + 4"
+				value_type_set = list(np.intersect1d(value_type_space, list(cd.keys())))
+				for elem_nm in value_type_set:
+					for value in cd[elem_nm]:
+						out[elem_nm.lower()].append(int(value))
+				# now e.g. [3, 3] has been appended to out["a"] and [3, 4] to out["b"].
+				# then the other columns.
+				n_add = len(out[value_type_set[0].lower()]) - len(out["text_id"])
+				for _ in range(n_add):
+					null_value_col_nm_set = [
+						str(x).lower() for x in list(np.setdiff1d(
+							value_type_space, value_type_set
+						))
+					]
+					for null_value_col_nm in null_value_col_nm_set:
+						# pad with None those values which were not extracted. e.g. if text
+						# was "gleason 3 + 3 / 3 + 4" we append None twice to
+						# out["c"] because of `for add_row_no in range(n_add):`
+						out[null_value_col_nm.lower()].append(None)
+					# the same thing is added as many times as necessary to have the same
+					# length in every column. note that e.g. "gleason 3 + 3 / 3 + 4"
+					# produces two rows where both rows have the same `start` and `stop`
+					# because the same regex captures both alternatives.
+					out["start"].append(ms[0])
+					out["stop"].append(ms[1])
+					out["text_id"].append(text_id)
+					out["obs_id"].append(None)
+	value_col_nm_space = [x.lower() for x in value_type_space]
+	for int_col_nm in ["text_id", "obs_id"] + value_col_nm_space:
 		out[int_col_nm] = pd.Series(out[int_col_nm], dtype="Int64")
 	out : pd.DataFrame = pd.DataFrame(out)
-	out.sort_values(by=["text_id", "start"], inplace=True)
+	out.sort_values(by=["text_id", "start", "stop"], inplace=True)
 	out.reset_index(drop=True, inplace=True)
 
-	logger.info('extract_gleason_scores starts combining any oprhan values')
-	is_orphan = out.loc[:, ['a','b','t','c']].notnull().sum(axis=1) == 1
+	logger.info('extract_gleason_scores starts combining any orpshan values')
+	is_orphan = out.loc[:, value_col_nm_space].notnull().sum(axis=1) == 1
 	if is_orphan.sum() > 0:
 		out_list : list[pd.DataFrame] = [out.loc[~is_orphan, :]]
 		out_orphan = out.loc[is_orphan, :]
 		text_id_set = out_orphan["text_id"].unique()
 		for i in range(len(text_id_set)):
 			is_text_id = out_orphan["text_id"] == text_id_set[i]
-			tmp_df = out_orphan.loc[is_text_id, :]
+			tmp_df = out_orphan.loc[is_text_id, :].copy()
+			tmp_df.reset_index(inplace=True, drop=True)
 			if is_text_id.sum() > 1:
-				tmp_df = ut.determine_element_combinations(dt = tmp_df)
+				tmp_df["grp"] = ut.determine_element_combinations(dt = tmp_df)
 				# initially tmp_df contains e.g.
         # a = [4, np.nan], b = [np.nan, 3], start = [8, 27], stop = [19, 39]
 				tmp_df = tmp_df.melt(id_vars=["text_id", "grp"], value_vars=["a", "b", "t", "c", "start", "stop"])
@@ -168,10 +198,13 @@ def extract_gleason_scores(
         # a = [4], b = [3], start = [8], stop = [39]
 			out_list.append(tmp_df)
 		out = pd.concat(out_list)
-	out["obs_id"] = 1000 * out["text_id"] +\
-		out["text_id"].duplicated(keep="first").cumsum()
+	out["obs_id"] = out.groupby("text_id")["text_id"].apply(
+			lambda x: pd.Series(np.arange(len(x)))
+		).reset_index(drop=True)
 	out.sort_values(by=["text_id", "obs_id"], inplace=True)
 	out.reset_index(inplace=True, drop=True)
 	out["warning"] = pd.Series(None, dtype="string")
+	if "grp" in out.columns:
+		out.drop(columns="grp")
 	logger.info('extract_gleason_scores finished')
 	return out
