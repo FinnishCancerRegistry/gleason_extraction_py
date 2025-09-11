@@ -32,7 +32,8 @@ def extract_gleason_scores(
 		`patterns` (ty.Iterable[str | re.Pattern]):
 			Each element is passed to `regex.compile`.
 		`match_types` (None | ty.Iterable[str]):
-			If not `None`, must be same length as `patterns`. Output
+			If not `None`, must be same length as `patterns`. Used to create column
+			`match_type` in output. Can be useful for debugging.
 
 	Raises:
 		ValueError: Number of texts and text ids have to match
@@ -47,12 +48,20 @@ def extract_gleason_scores(
 			`b` (Int64): Second most prevalent (secondary) grade value
 			`t` (Int64): Third most common (tertiary) grade value
 			`c` (Int64): Gleason scoresum
+			`match_type` (str|None):
+				If `match_types` is passed, this is for row `i` the `match_types[j]`
+				when the `j`th pattern in `patterns` was used to extract the values
+				in this row. If more than one pattern was used, the
+				`match_types[j]`, `match_types[k]`, etc. are concatenated into one
+				string via `"; ".join(x)`.
 			`warning` (str|None):
 				May contain a warning if the `match_types` element of the correspoding
 				`patterns` element that was used to extract the values in the row
 				do not match with what was actually extracted. For instance if for some
 				reason the `match_types` element was `"a + b = c"` but only `a` and `b`
 				were extracted then this column will contain a warning about that.
+				More than one warning are concatenated into one string via
+				`"; ".join(x)`. I think this is these days always `None`.
 			  
 	"""
 
