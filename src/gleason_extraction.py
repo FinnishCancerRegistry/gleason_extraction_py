@@ -7,52 +7,12 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
-import utils as ut
+import utils as geut
 import gleason_extraction_regexes as ger
 import logs
 logger = logs.logging.getLogger('gleason_extraction') # type: ignore
 
 # extraction funs ---------------------------------------------------------
-def rm_false_positives(x):
-	""" Remove false positive matches of gleason scores in text.
-	Especially names of fields in text such as "gleason 6 or less" caused false positives.
-
-	Args:
-		x (str): text
-
-	Returns:
-		str: trimmed text
-	"""
-	rm = [
-		ger.base_gleason_regex + "[ ]?4[ ](ja|tai|or|och|eller)[ ]5",
-		"fokaalinen syöpä \\([^)]*\\)",
-		"\\(gleason score 6 tai alle\\)"
-	]
-	for pat in rm:
-		x = re.sub(pat,"", x) 
-	return x
-
-def prepare_text(x):
-	"""Does everything needed to prepare text for the actual extraction; 
-	i.e. normalises the text and removes false positives.
-	
-	Args:
-		x (str): text
-
-	Returns:
-		str: prepared text
-	"""
-	x = rm_false_positives(ut.normalise_text(x))
-	# to remove certain expressions we know in advance to have no bearing
-	# on gleason scores --- to shorten and simplify the text.
-	x = re.sub("\\([^0-9]+\\)", " ", x) # e.g. "(some words here)"
-	x = re.sub("\\([ ]*[0-9]+[ ]*%[ ]*\\)", " ", x) # e.g. "(45 %)"
-	# remove a false positive. this should live in rm_false_positives!
-	# e.g. "Is bad (Gleason score 9-10): no"
-	re_field_name_gleason_range = "[(][ ]*" + ger.whitelist_gleason_word + "[^0-9]*" + "[5-9][ ]*[-][ ]*([6-9]|(10))" + "[ ]*[)]"
-	x = re.sub(re_field_name_gleason_range, " ", x)
-		
-	return re.sub("[ ]+", " ", x)
 
 def extract_gleason_scores(
 		texts : ty.Iterable[str],
@@ -122,7 +82,7 @@ def extract_gleason_scores(
 		assert isinstance(text, str),\
 			"The text with `text_id = %i` was not a string but of type `%s`"\
 				% (text_id, str(type(text)))
-		text = prepare_text(text)
+		text = geut.prepare_text(text)
 		for cp in compiled_patterns:
 			for m in cp.finditer(text):
 				ms = m.span()
@@ -183,7 +143,7 @@ def extract_gleason_scores(
 			tmp_df = out_orphan.loc[is_text_id, :].copy()
 			tmp_df.reset_index(inplace=True, drop=True)
 			if is_text_id.sum() > 1:
-				tmp_df["grp"] = ut.determine_element_combinations(dt = tmp_df)
+				tmp_df["grp"] = geut.determine_element_combinations(dt = tmp_df)
 				# initially tmp_df contains e.g.
         # a = [4, np.nan], b = [np.nan, 3], start = [8, 27], stop = [19, 39]
 				tmp_df = tmp_df.melt(id_vars=["text_id", "grp"], value_vars=["a", "b", "t", "c", "start", "stop"])

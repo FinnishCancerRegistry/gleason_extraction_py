@@ -146,8 +146,8 @@ class TestGleasonExtraction(unittest.TestCase):
 		self.assertFalse(u.is_found(ger.whitelist_tertiary_regex, "3.tblyleisin gleason-gradus (1-5) 5"))
 
 	def test_prepare_text(self):
-		self.assertEqual(ge.prepare_text("Gleason 7 (4+3)"), "gleason 7 (4+3)")
-		self.assertEqual(ge.prepare_text("Is bad (Gleason score 9-10): no"), "is bad no")
+		self.assertEqual(geut.prepare_text("Gleason 7 (4+3)"), "gleason 7 (4+3)")
+		self.assertEqual(geut.prepare_text("Is bad (Gleason score 9-10): no"), "is bad no")
 
 	
 if __name__ == '__main__':

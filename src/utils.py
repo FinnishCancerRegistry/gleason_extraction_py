@@ -4,10 +4,10 @@ import sys
 
 import numpy as np
 import pandas as pd
-from numpy.core.fromnumeric import repeat
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
+import gleason_extraction_regexes as ger
 import logs
 logger = logs.logging.getLogger('utils')
 
@@ -142,3 +142,44 @@ def determine_element_combinations(
 			if break_search:
 				break
 	return groups
+
+def rm_false_positives(x):
+	""" Remove false positive matches of gleason scores in text.
+	Especially names of fields in text such as "gleason 6 or less" caused false positives.
+
+	Args:
+		x (str): text
+
+	Returns:
+		str: trimmed text
+	"""
+	rm = [
+		ger.base_gleason_regex + "[ ]?4[ ](ja|tai|or|och|eller)[ ]5",
+		"fokaalinen syöpä \\([^)]*\\)",
+		"\\(gleason score 6 tai alle\\)"
+	]
+	for pat in rm:
+		x = re.sub(pat,"", x) 
+	return x
+
+def prepare_text(x):
+	"""Does everything needed to prepare text for the actual extraction; 
+	i.e. normalises the text and removes false positives.
+	
+	Args:
+		x (str): text
+
+	Returns:
+		str: prepared text
+	"""
+	x = rm_false_positives(normalise_text(x))
+	# to remove certain expressions we know in advance to have no bearing
+	# on gleason scores --- to shorten and simplify the text.
+	x = re.sub("\\([^0-9]+\\)", " ", x) # e.g. "(some words here)"
+	x = re.sub("\\([ ]*[0-9]+[ ]*%[ ]*\\)", " ", x) # e.g. "(45 %)"
+	# remove a false positive. this should live in rm_false_positives!
+	# e.g. "Is bad (Gleason score 9-10): no"
+	re_field_name_gleason_range = "[(][ ]*" + ger.whitelist_gleason_word + "[^0-9]*" + "[5-9][ ]*[-][ ]*([6-9]|(10))" + "[ ]*[)]"
+	x = re.sub(re_field_name_gleason_range, " ", x)
+		
+	return re.sub("[ ]+", " ", x)
