@@ -236,7 +236,7 @@ def make_column_warning(
 	b : ty.Iterable[int],
 	t : ty.Iterable[int],
 	c : ty.Iterable[int]
-) -> list[None | str]:
+) -> pd.Series:
 	w = []
 	if match_types is None:
 		if isinstance(a, (list, pd.Series, np.ndarray)):
@@ -246,7 +246,7 @@ def make_column_warning(
 			for a_value in a:
 				n += 1
 			w : list[None | str] = [None] * n
-		return w
+		return pd.Series(w, dtype="str")
 	for mt_value, a_value, b_value, t_value, c_value in zip(match_types, a, b, t, c):
 		w.append(make_warning(
 			match_type=mt_value,
@@ -256,7 +256,7 @@ def make_column_warning(
 			c=c_value
 		))
 	
-	return(w)
+	return(pd.Series(w, dtype="str"))
 
 def aggregate_column_warning(warning : pd.Series) -> str | None:
 	is_missing = warning.isnull()

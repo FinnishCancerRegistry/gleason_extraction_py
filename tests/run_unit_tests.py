@@ -34,7 +34,7 @@ class TestGleasonExtraction(unittest.TestCase):
 		diff = u.compare_dts(exp, obs, ["text_id", "a", "b", "c"])
 		self.assertTrue(diff.empty)
 
-		obs = ge.extract_gleason_scores(["", "asdf"], [0, 1])
+		obs = ge.extract_gleason_scores(["", "asdf"])
 		self.assertTrue(obs.empty)
 
 	@unittest.skipIf((not os.path.exists("tests/data/input.csv") and not os.path.exists("tests/data/output.csv")), reason="validation data is missing")
