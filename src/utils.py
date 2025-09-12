@@ -195,11 +195,11 @@ def make_warning(
 	t : None | pd.api.typing.NAType | np.integer | int,
 	c : None | pd.api.typing.NAType | np.integer | int
 ) -> str | None:
-	if match_type is None or pd.isna(match_type) or\
-		not match_type in __regex_expected_value_dict__.keys():
-		return None
 	
-	required_value_nms : list[str] = __regex_expected_value_dict__[match_type]
+	if pd.isna(match_type):
+		required_value_nms = []
+	else:
+		required_value_nms : list[str] = __regex_expected_value_dict__[match_type]
 	value_dict = {
 		"a": a,
 		"b": b,
@@ -217,11 +217,9 @@ def make_warning(
 			"Pattern was supposed to extract `%s` but did not extract %s" %\
 				(match_type, ", ".join(missing_required_value_nms))
 		)
-
-	if match_type in ["a + b = c", "a + b + t = c"] and\
-		not pd.isna(a) and not pd.isna(b) and not pd.isna(c) and\
-		a + b != c:
-			w.append("Extracted a + b != c")
+	
+	if not pd.isna(a) and not pd.isna(b) and not pd.isna(c) and a + b != c:
+		w.append("Extracted a + b != c")
 
 	if len(w) == 0:
 		w = None

@@ -36,7 +36,7 @@ class TestGleasonExtraction(unittest.TestCase):
 
 		obs = ge.extract_gleason_scores_from_texts(["", "asdf"])
 		self.assertTrue(obs.empty)
-
+	
 	@unittest.skipIf((not os.path.exists("tests/data/input.csv") and not os.path.exists("tests/data/output.csv")), reason="validation data is missing")
 	def test_validation(self):
 		input = pd.read_csv("tests/data/input.csv") #columns: text_id,text
@@ -90,6 +90,31 @@ class TestGleasonExtraction(unittest.TestCase):
 		)
 		exp = "Pattern was supposed to extract `a + b = c` but did not extract c"
 		self.assertEqual(obs, exp)
+		obs = geut.make_warning(
+			a=3,
+			b=3,
+			c=6,
+			t=pd.NA,
+			match_type=None
+		)
+		exp = None
+		self.assertEqual(obs, exp)
+		
+		obs = ge.extract_gleason_scores_from_text(
+			text= "gleason 4 + 3 something something gleason 4 + 4",
+			patterns=["gleason (?P<A>[3-5])[ +]+(?P<B>[3-5])"],
+			match_types=None
+		)
+		exp = pd.Series([None, None], dtype="str")
+		self.assertTrue(np.array_equal(obs["warning"], exp))
+		
+		obs = ge.extract_gleason_scores_from_text(
+			text= "gleason 4 + 3 = 7 something something gleason 4 + 4 = 7",
+			patterns=["gleason (?P<A>[3-5])[ +]+(?P<B>[3-5])[ =]+(?P<C>[6-9])"],
+			match_types=None
+		)
+		exp = pd.Series([None, "Extracted a + b != c"], dtype="str")
+		self.assertTrue(np.array_equal(obs["warning"], exp))
 
 	# regex tests ----------------------------------------------------------------
 
