@@ -70,6 +70,26 @@ class TestGleasonExtraction(unittest.TestCase):
 		obs = geut.determine_element_combinations(dt)
 		exp = [0, 1, 0, 1, 2, 3]
 		self.assertTrue(np.array_equal(obs, exp))
+	
+	def test_make_warning(self):
+		obs = geut.make_warning(
+			a=3,
+			b=3,
+			c=7,
+			t=pd.NA,
+			match_type="a + b = c"
+		)
+		exp = "Extracted a + b != c"
+		self.assertEqual(obs, exp)
+		obs = geut.make_warning(
+			a=3,
+			b=3,
+			c=pd.NA,
+			t=pd.NA,
+			match_type="a + b = c"
+		)
+		exp = "Pattern was supposed to extract `a + b = c` but did not extract c"
+		self.assertEqual(obs, exp)
 
 	# regex tests ----------------------------------------------------------------
 

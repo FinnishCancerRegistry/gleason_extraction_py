@@ -197,11 +197,11 @@ __regex_expected_value_dict__ = {
 }
 
 def make_warning(
-	match_type : None | str,
-	a : None | int,
-	b : None | int,
-	t : None | int,
-	c : None | int
+	match_type : None | pd.api.typing.NAType | str,
+	a : None | pd.api.typing.NAType | np.integer | int,
+	b : None | pd.api.typing.NAType | np.integer | int,
+	t : None | pd.api.typing.NAType | np.integer | int,
+	c : None | pd.api.typing.NAType | np.integer | int
 ) -> str | None:
 	if match_type is None or pd.isna(match_type) or\
 		not match_type in __regex_expected_value_dict__.keys():
@@ -215,27 +215,36 @@ def make_warning(
 		"c": c
 	}
 		
-	w = None
+	w = []
 	missing_required_value_nms = []
 	for rvn in required_value_nms:
-		try:
-			if value_dict[rvn] is None or pd.isna(value_dict[rvn]):
-				missing_required_value_nms.append(rvn)
-		except:
-			import ipdb; ipdb.set_trace()
+		if pd.isna(value_dict[rvn]):
+			missing_required_value_nms.append(rvn)
 	if len(missing_required_value_nms) > 0:
-		w = "Pattern was supposed to extract `%s` but did not extract %s" %\
-			(match_type, ", ".join(missing_required_value_nms))
+		w.append(
+			"Pattern was supposed to extract `%s` but did not extract %s" %\
+				(match_type, ", ".join(missing_required_value_nms))
+		)
+
+	if match_type in ["a + b = c", "a + b + t = c"] and\
+		not pd.isna(a) and not pd.isna(b) and not pd.isna(c) and\
+		a + b != c:
+			w.append("Extracted a + b != c")
+
+	if len(w) == 0:
+		w = None
+	else:
+		w = "; ".join(w)
 	
 	return w
 
 import typing as ty
 def make_column_warning(
 	match_types : None | ty.Iterable[str],
-	a : ty.Iterable[int],
-	b : ty.Iterable[int],
-	t : ty.Iterable[int],
-	c : ty.Iterable[int]
+	a : ty.Iterable[None | pd.api.typing.NAType | np.integer | int],
+	b : ty.Iterable[None | pd.api.typing.NAType | np.integer | int],
+	t : ty.Iterable[None | pd.api.typing.NAType | np.integer | int],
+	c : ty.Iterable[None | pd.api.typing.NAType | np.integer | int]
 ) -> pd.Series:
 	w = []
 	if match_types is None:
@@ -247,6 +256,7 @@ def make_column_warning(
 				n += 1
 			w : list[None | str] = [None] * n
 		return pd.Series(w, dtype="str")
+	
 	for mt_value, a_value, b_value, t_value, c_value in zip(match_types, a, b, t, c):
 		w.append(make_warning(
 			match_type=mt_value,
