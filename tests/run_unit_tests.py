@@ -21,7 +21,7 @@ class TestGleasonExtraction(unittest.TestCase):
 	 
 	def test_extract_gleason_scores(self):
 		data = pd.read_csv("%s/test_text_data.csv" % test_dir_path)
-		obs = ge.extract_gleason_scores(data["text"], data["text_id"])
+		obs = ge.extract_gleason_scores_from_texts(data["text"], data["text_id"])
 		exp = pd.read_csv(
 			"%s/test_extractions.csv" % test_dir_path,
 			dtype={
@@ -34,7 +34,7 @@ class TestGleasonExtraction(unittest.TestCase):
 		diff = u.compare_dts(exp, obs, ["text_id", "a", "b", "c"])
 		self.assertTrue(diff.empty)
 
-		obs = ge.extract_gleason_scores(["", "asdf"])
+		obs = ge.extract_gleason_scores_from_texts(["", "asdf"])
 		self.assertTrue(obs.empty)
 
 	@unittest.skipIf((not os.path.exists("tests/data/input.csv") and not os.path.exists("tests/data/output.csv")), reason="validation data is missing")
@@ -43,7 +43,7 @@ class TestGleasonExtraction(unittest.TestCase):
 		input = input.groupby("text_id").first().reset_index() # delete duplicates
 		texts = list(input.text)
 		text_ids = list(input.text_id)
-		extracted = ge.extract_gleason_scores(texts, text_ids)
+		extracted = ge.extract_gleason_scores_from_texts(texts, text_ids)
 		expected = pd.read_csv("tests/data/output.csv") #columns: text_id,a,b,c
 		diff = u.compare_dts(expected, extracted, ["text_id","a", "b", "c"])
 		self.assertTrue(diff.empty)

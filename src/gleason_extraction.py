@@ -14,7 +14,7 @@ logger = logs.logging.getLogger('gleason_extraction') # type: ignore
 
 # extraction funs ---------------------------------------------------------
 
-def extract_gleason_scores(
+def extract_gleason_scores_from_texts(
 		texts : ty.Iterable[None | str],
 		text_ids : None | ty.Iterable[int] = None,
 		patterns : ty.Iterable[str | re.Pattern] = ger.fcr_pattern_dt()["full_pattern"],
@@ -36,7 +36,7 @@ def extract_gleason_scores(
 		`extract_gleason_scores_from_text` has plus column `text_id`.
 	"""
 
-	logger.info('extract_gleason_scores called')
+	logger.info('extract_gleason_scores_from_texts called')
 	try:
 		if not isinstance(texts, ty.Iterable):
 			raise TypeError("Arg `texts` must be Iterable")
@@ -68,7 +68,7 @@ def extract_gleason_scores(
 		out.append(df)
 	out = pd.concat(out)
 	out.reset_index(inplace=True, drop=False)
-	logger.info('extract_gleason_scores finished')
+	logger.info('extract_gleason_scores_from_texts finished')
 	return out
 
 def extract_gleason_scores_from_text(
