@@ -76,17 +76,14 @@ def whitelist_to_whitelist_regex(whitelist, match_count = "+"):
 		match_count (str, optional): Repetition quantity. Defaults to "+".
 	
 	Raises:
-		ValueError: match_count lenght has to be 1
+		ValueError: match_count length has to be 1
 
 	Returns:
 		str: regex
 	"""
-	try:
-		if not len(match_count) == 1:
-			raise ValueError('match_count lenght has to be 1')
-	except Exception as e:
-		logger.exception(e)
-		raise
+	if not len(match_count) == 1:
+		raise ValueError('match_count length has to be 1')
+	
 	return "(" + "(" + "|".join(whitelist)  + ")" + whitelist_sep() + ")" + match_count
 
 
@@ -106,12 +103,8 @@ def word_whitelist_to_word_whitelist_regex(whitelist, match_count = "+"):
 	Returns:
 		str: regex
 	"""
-	try:
-		if not len(match_count) == 1:
-			raise ValueError('match_count lenght has to be 1')
-	except Exception as e:
-		logger.exception(e)
-		raise
+	if not len(match_count) == 1:
+		raise ValueError('match_count lenght has to be 1')
 	return "(" + "(" + "|".join(whitelist) + ")" + word_suffices + whitelist_sep() + ")" + match_count
 
 
@@ -405,11 +398,7 @@ def fcr_pattern_dt():
 	pattern_dt["full_pattern"] = pattern_dt["prefix"] + pattern_dt["value"] + pattern_dt["suffix"]
 	pattern_dt.reset_index(drop=True, inplace=True)
 
-	try:
-		if (pattern_dt.pattern_name.duplicated().any()):
-			raise ValueError('Pattern names should be unique.')
-	except Exception as e:
-		logger.exception(e)
-		raise
+	if (pattern_dt.pattern_name.duplicated().any()):
+		raise ValueError('Pattern names should be unique.')
 	return pattern_dt
 

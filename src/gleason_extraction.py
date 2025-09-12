@@ -9,8 +9,6 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import utils as geut
 import gleason_extraction_regexes as ger
-import logs
-logger = logs.logging.getLogger('gleason_extraction') # type: ignore
 
 # extraction funs ---------------------------------------------------------
 
@@ -35,16 +33,10 @@ def extract_gleason_scores_from_texts(
 		`pd.DataFrame`. It has all the columns that the output of
 		`extract_gleason_scores_from_text` has plus column `text_id`.
 	"""
-
-	logger.info('extract_gleason_scores_from_texts called')
-	try:
-		if not isinstance(texts, ty.Iterable):
-			raise TypeError("Arg `texts` must be Iterable")
-		if not isinstance(text_ids, (ty.Iterable, type(None))):
-			raise TypeError("Arg `text_ids` must be Iterable")
-	except Exception as e:
-		logger.exception(e)
-		raise
+	if not isinstance(texts, ty.Iterable):
+		raise TypeError("Arg `texts` must be Iterable")
+	if not isinstance(text_ids, (ty.Iterable, type(None))):
+		raise TypeError("Arg `text_ids` must be Iterable")
 	if text_ids is None:
 		iterator = enumerate(texts)
 	else:
@@ -68,7 +60,6 @@ def extract_gleason_scores_from_texts(
 		out.append(df)
 	out = pd.concat(out)
 	out.reset_index(inplace=True, drop=True)
-	logger.info('extract_gleason_scores_from_texts finished')
 	return out
 
 def extract_gleason_scores_from_text(

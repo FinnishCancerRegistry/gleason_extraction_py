@@ -8,8 +8,6 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import gleason_extraction_regexes as ger
-import logs
-logger = logs.logging.getLogger('utils')
 
 
 def normalise_text(x : str) -> str:
@@ -85,14 +83,8 @@ def determine_element_combinations(
 	Returns:
 		pd.Series[pd.Int64DType]: Group indicators, one for each row of `dt`.
 	"""
-
-	try:
-		if not dt.loc[dt[['a','b','t','c']].notnull().sum(axis=1) != 1].empty:
-			raise ValueError('There has to be exactly one non-nan a/b/t/c value per row')
-	except Exception as e:
-		logger.exception(e)
-		raise
-	
+	if not dt.loc[dt[['a','b','t','c']].notnull().sum(axis=1) != 1].empty:
+		raise ValueError('There has to be exactly one non-nan a/b/t/c value per row')	
 
 	allowed_combinations = [
 		["c", "a", "b", "t"],
@@ -256,7 +248,7 @@ def make_column_warning(
 				n += 1
 			w : list[None | str] = [None] * n
 		return pd.Series(w, dtype="str")
-	
+
 	for mt_value, a_value, b_value, t_value, c_value in zip(match_types, a, b, t, c):
 		w.append(make_warning(
 			match_type=mt_value,
