@@ -1,48 +1,55 @@
-# Gleason score extraction at the Finnish Cancer Registry
+Gleason score extraction at the Finnish Cancer Registry
+=======================================================
 
-Gleasonextraction is a python tool to extract gleason scores from pathology texts. This is python implementation of the original [research project written in R](https://github.com/WetRobot/gleason_extraction) written for the peer-reviewed study "Accurate pattern-based extraction of complex Gleason score expressions from pathology reports" (https://doi.org/10.1016/j.jbi.2021.103850).
+Gleasonextraction is a python tool to extract gleason scores from pathology texts. This is python implementation of the original [research project written in R](https://github.com/FinnishCancerRegistry/gleason_extraction) written for the peer-reviewed study "Accurate pattern-based extraction of complex Gleason score expressions from pathology reports" (https://doi.org/10.1016/j.jbi.2021.103850).
 
-Contents:
+# Installation
 
-- `src/gleason_extraction.py`: the regular expressions and how they are used are defined here.
-- `src/utils.py`: general utility functions.
-- `tests/*`: unit tests.
+```bash
+# optional virtual environment
+python -m venv .venv
+./.venv/Scripts/activate
 
-To use this code, you can simply add this project as a sub-dir of your
-project and import the sub-dir with e.g.
+# install deps
+pip install -r requirements.txt
+```
+
+# Usage
 
 ```python
 import gleason_extraction_py as ge
+
+ge.extract_gleason_scores_from_text(
+  text= "gleason 4 + 3 something something gleason 4 + 4",
+  patterns=["gleason (?P<A>[3-5])[ +]+(?P<B>[3-5])"],
+  match_types=["a + b"]
+)
+
+   obs_id  a  b     t     c  start  stop match_type warning
+0       0  4  3  <NA>  <NA>      0    13      a + b    None
+1       1  4  4  <NA>  <NA>     34    47      a + b    None
 ```
 
-## Extraction process description
+# Extraction process description
 
 This was written to make the extraction process understandable. Mainly what
 assumptions are made, therefore what limitations there are.
 
-Extraction is based on regular expressions. They must be defined into a table 
-of regexes. The table must look like this:
+Extraction is based on regular expressions. The actual extracted values
+must be included in named capture groups, one of `A`, `B`, `T`, `C`, and
+`A_and_B`. A simple example is given above under section Usage.
 
-|pattern_name |match_type |prefix      |value           |suffix   |
-|:------------|:----------|:-----------|:---------------|:--------|
-|pattern_01   |a + b      |gleason[ ]* |[0-9] [+] [0-9] |         |
-|pattern_02   |a + b      |gleason[ ]* |[0-9] and [0-9] |         |
-|pattern_03   |c          |gleason[ ]* |[0-9]           | karsino |
+The regexes are used in the given order. This matters because
+parts of text can sometimes match multiple regexes you have written.
+To ensure this only happens on the first matching regex, after every match
+the matched part of text is "masked", replaced with the number
+of underscores which keeps the length of the text the same. E.g.
 
-A table like this is used by `extract_gleason_scores`
-(ultimately `extract_context_affixed_values`) to perform extraction
-from text. They are used in the order given in the table. The prefix and suffix
-define mandatory expressions before and after the value itself for higher
-certainty. Each found match is replaced in text by a "mask" 
-(e.g. "gleason 3 + 4, gleason 7" -> "___________, gleason 7" 
--> "__________, ___________"). This is done to avoid matching the same part of
-text multiple times. Therefore, it is important to have the patterns in
-a good order in the table.
+`"something gleason 3 + 4 something"`
 
-`pattern_name` is used simply to identify what pattern was used. `match_type`
-must be one of the allowed match types 
-(see `component_parsing_instructions_by_match_type`) --- it is used later
-to parse the extracted value string (e.g. "3 + 4" -> "{'a': 3, 'b': 4}").
+is in masked form
+
+`"something _____________ something"`
 
 The formation of the actual regular expressions in `gleason_extraction.py`
 is not documented here in detail, but the philosophy was to avoid false 
@@ -56,13 +63,11 @@ text are extracted from text (again, we hate false positives).
 The regular expressions have been written for Finnish and Swedish texts in mind,
 but they can be modified to work better for e.g. English texts by adding English
 expressions into the various whitelists. A few English
-expressions have already been included --- English language was rare in Finnish our
-text data.
+expressions have already been included --- English language was rare in our
+Finnish text data.
 
-Before the actual extraction is performed in `extract_gleason_scores`,
-the text is "cleaned up" by `prepare_text`.
-This removes certain false positives and simplifies
-and lowercases the text. Especially names of fields in text such as 
+Before the actual extraction certain false positives are removed and the text
+is simplified and lowercased. Especially names of fields in text such as 
 "gleason 6 or less" caused false positives. The simplification step removes
 line changes, repeated special characters (e.g. "....." -> "."), and replaces
 roman numerals with latin ones. Also, to handle texts where all lines were
@@ -71,21 +76,7 @@ between all instances of a number and letter
 (e.g. "Gleason 3 + 4Some other text"). We remove two kinds of expressions
 from text to simplify and shorten them.
 
-After cleaning the texts, `extract_context_affixed_values` is called
-on the given texts and table of regexes.
-After this we have the `match_type` (e.g. "a + b") and value string of
-a part of text (e.g. "3 + 4"). 
-
-The value string must now be parsed, i.e.
-the separate components must be collected into a structured format.
-The parsing rules are defined in `component_parsing_instructions_by_match_type`
-and `extract_context_affixed_values` is used in the parsing by
-`parse_gleason_value_string_elements`. This step can in rare cases produce
-problematic results, e.g. `match_type = "a + b"` but only "a" was succesfully
-parsed. A few of such problematic results are programmatically identified in
-`parse_gleason_value_string_elements`.
-
-In the last step we identify combinations of A/B/T/C values (at this point
+After extraction we identify combinations of A/B/T/C values (at this point
 integers) which were not collected together previously 
 (in e.g. `match_type = "a + b"` they are already collected together and need no
 further processing). This is necessary because many texts contain "tables" in
@@ -105,16 +96,5 @@ combination. This has been found to work very well, but it is based on the
 what is assumed in the list of allowed combinations and the order in which
 the elements appear in text only (and not based on e.g. the distance between
 two elements).
-
-Finally, the product of the extraction process is a table with columns
-
-- `text_id` (int64): original text_id
-- `obs_id` (int64): original text_id extended with the value, 
-          which tells the order of appearance in the text. E.g for text_id 1, obs_id is 1001
-- `a` (int/NoneType): Most prevalent gleason value
-- `b` (int/NoneType): Second most prevalent gleason value
-- `t` (int/NoneType): Tertiary gleason value
-- `c` (int/NoneType): Gleason score
-- `warning` (str): Warning message (match type does not match extracted values, gleason score does not match primary and secondary values)
 
 This concludes the extraction process.
