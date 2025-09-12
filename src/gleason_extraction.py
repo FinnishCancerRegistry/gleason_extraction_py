@@ -67,7 +67,7 @@ def extract_gleason_scores_from_texts(
 		)
 		out.append(df)
 	out = pd.concat(out)
-	out.reset_index(inplace=True, drop=False)
+	out.reset_index(inplace=True, drop=True)
 	logger.info('extract_gleason_scores_from_texts finished')
 	return out
 
