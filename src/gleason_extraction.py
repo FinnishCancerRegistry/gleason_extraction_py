@@ -51,7 +51,8 @@ def extract_gleason_scores_from_texts(
 		texts : ty.Iterable[None | str],
 		text_ids : None | ty.Iterable[int] = None,
 		patterns : ty.Iterable[str | re.Pattern] = ger.fcr_pattern_dt()["full_pattern"],
-		match_types : None | ty.Iterable[str] = ger.fcr_pattern_dt()["match_type"]
+		match_types : None | ty.Iterable[str] = ger.fcr_pattern_dt()["match_type"],
+		prepare_text : bool = True
 	):
 	"""Extract Gleason Scores from Texts.
 
@@ -109,7 +110,8 @@ def extract_gleason_scores_from_texts(
 		df = extract_gleason_scores_from_text(
 			text=text,
 			patterns=patterns,
-			match_types=match_types
+			match_types=match_types,
+			prepare_text=prepare_text
 		)
 		df.insert(
 			column="text_id",
@@ -125,7 +127,8 @@ def extract_gleason_scores_from_texts(
 def extract_gleason_scores_from_text(
 		text : None | str,
 		patterns : ty.Iterable[str | re.Pattern] = ger.fcr_pattern_dt()["full_pattern"],
-		match_types : None | ty.Iterable[str] = ger.fcr_pattern_dt()["match_type"] # type: ignore
+		match_types : None | ty.Iterable[str] = ger.fcr_pattern_dt()["match_type"], # type: ignore
+		prepare_text : bool = True
 	):
 	"""Extract Gleason Scores from a Text.
 
@@ -139,6 +142,8 @@ def extract_gleason_scores_from_text(
 		`match_types` (None | ty.Iterable[str]):
 			If not `None`, must be same length as `patterns`. Used to create column
 			`match_type` in output. Can be useful for debugging.
+		`prepare_text` (bool):
+			If `True`, run `prepare_text` on `text` before extraction.
 
 	Returns:
 		`DataFrame`: Gleason extraction table with columns.
@@ -185,7 +190,8 @@ def extract_gleason_scores_from_text(
 	# @codedoc_comment_block usage(gleason_extraction)
 	assert isinstance(text, (str, type(None))),\
 		"Arg `text` was not `str` nor `None` but %s" % str(type(text))
-	
+	assert isinstance(prepare_text, bool),\
+		"Arg `prepare_text` was not `bool` but %s" % str(type(text))
 	# @codedoc_comment_block intrepretation(gleason_extraction)
 	# @codedoc_insert_comment_block intrepretation(extract_gleason_scores_from_text)
 	# @codedoc_comment_block intrepretation(gleason_extraction)
@@ -239,10 +245,11 @@ def extract_gleason_scores_from_text(
 		match_types : list[None | str] = [None] * len(compiled_patterns)
 	value_type_space = ["A", "B", "T", "C"]
 	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
-	# - Run `prepare_text` on `text`.
+	# - If `prepare_text = True`, run `prepare_text` on `text`.
 	# @codedoc_insert_comment_block intrepretation(prepare_text)
 	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
-	text = geut.prepare_text(text)
+	if prepare_text:
+		text = geut.prepare_text(text)
 	for cp, cp_type in zip(compiled_patterns, match_types):
 		for m in cp.finditer(text):
 			# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)

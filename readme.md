@@ -70,7 +70,7 @@ ge.extract_gleason_scores_from_text(
   At least with `regex` 2.5.161 this also works for pre-compiled
   regexes, so `patterns` can contain either `str` or `regex.Pattern`
   type elements.
-- Run `prepare_text` on `text`.
+- If `prepare_text = True`, run `prepare_text` on `text`.
   + `prepare_text` removes some known false positives (e.g.
     "Is bad (Gleason score 9-10): no") and replaces repeated whitespaces
     with a single whitespace
