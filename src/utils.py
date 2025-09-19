@@ -86,6 +86,18 @@ def determine_element_combinations(
 	if not dt.loc[dt[['a','b','t','c']].notnull().sum(axis=1) != 1].empty:
 		raise ValueError('There has to be exactly one non-nan a/b/t/c value per row')	
 
+	# @codedoc_comment_block intrepretation(determine_element_combinations)
+	#   + `determine_element_combinations` uses a hard-coded list of allowed
+	#     gleason element combinations to search for (["c", "a", "b", "t"],
+	#     ["c", "a", "b"], ["c", "b", "a"], ...) in its input data. It simply
+	#     goes through each combination, repeats each element from 1 to
+	#     `n_max_each` (default 5) times and sees what fits the so-far unmatched
+	#     elements in the input data. Note that the repeating of elements means
+	#     that e.g. ["c", "c", "a", "a", "b", "b"] can also be matched.
+	#     Repetition of this sort is not uncommon in tables within the text.
+	#     Values matched with a combination get a common combination identifier
+	#     (e.g. `["c", "c", "a", "a", "b", "b"]` -> `[0, 1, 0, 1, 0, 1]`).
+	# @codedoc_comment_block intrepretation(determine_element_combinations)
 	allowed_combinations = [
 		["c", "a", "b", "t"],
 		["c", "a", "b"],
@@ -106,12 +118,9 @@ def determine_element_combinations(
 	for i in range(dt.shape[0]):
 		for value_col_nm in ["a", "b", "t", "c"]:
 			tmp = dt[value_col_nm].isnull()
-			try:
-				if not tmp.iloc[i]:
-					types.append(value_col_nm)
-					break
-			except:
-				import IPython; IPython.embed()
+			if not tmp.iloc[i]:
+				types.append(value_col_nm)
+				break
 	types = pd.Series(types)
 	n = dt.shape[0]
 	max_grp = 0
@@ -164,6 +173,13 @@ def prepare_text(x):
 	Returns:
 		str: prepared text
 	"""
+	# @codedoc_comment_block intrepretation(prepare_text)
+	#   + `prepare_text` removes some known false positives (e.g.
+	#     "Is bad (Gleason score 9-10): no") and replaces repeated whitespaces
+	#     with a single whitespace
+	#     ("gleason score            9" -> "gleason score 9"). These actions
+	#     cause the output string to be shorter than the input string.
+	# @codedoc_comment_block intrepretation(prepare_text)
 	x = rm_false_positives(normalise_text(x))
 	# to remove certain expressions we know in advance to have no bearing
 	# on gleason scores --- to shorten and simplify the text.
@@ -207,6 +223,14 @@ def make_warning(
 		"c": c
 	}
 		
+	# @codedoc_comment_block intrepretation(make_column_warning)
+	#   + `make_column_warning` loops over its inputs and calls `make_warning`
+	#     at each step. A warning text is created if the `match_type` does not
+	#     correspond with what was extracted --- e.g. `match_type = "a + b = c"`
+	#     but `c` is missing (was not extraced). Additionally, a warning is added
+	#     if all of `a`, `b`, and `c` was extracted but `a + b != c`.
+	#     If nothing was wrong then the warning is `None`.
+	# @codedoc_comment_block intrepretation(make_column_warning)
 	w = []
 	missing_required_value_nms = []
 	for rvn in required_value_nms:
@@ -246,7 +270,7 @@ def make_column_warning(
 				n += 1
 			w : list[None | str] = [None] * n
 		return pd.Series(w, dtype="str")
-
+	
 	for mt_value, a_value, b_value, t_value, c_value in zip(match_types, a, b, t, c):
 		w.append(make_warning(
 			match_type=mt_value,

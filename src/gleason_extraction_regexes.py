@@ -1,5 +1,31 @@
 import pandas as pd
 
+# @codedoc_comment_block study_regexes
+# The regular expressions used in the
+# [study](https://doi.org/10.1016/j.jbi.2021.103850)
+# were formed by writing "lego blocks" of simpler regular expressions,
+# functions that process regular expressions into more complex ones, and
+# making use of these two types of objects to form rather long regular
+# expressions that were ultimately used to extract Gleason scores in our data.
+#
+# While a programme based on regular expressions is always specific for the
+# dataset for which they were developed, this is also true in statistical models
+# where the statistical model is general but the fit is specific to the dataset.
+# Our regexes can be straightforward to adapt to other datasets because the
+# "lego blocks" are often lists of mandatory words that must appear before
+# and/or after a gleason score match. For instance the regular expression
+# for `kw_a`, keyword-and-primary, requires both the words "gleason" (in some
+# form, with common typos) and the word "primary", with possible conjugates,
+# and many synonyms. Both must appear but in either order, so both e.g.
+# "gleason primary 3" and "primary gleason 3" are matched.
+#
+# Some mandatory words are required in all the regular expressions, even
+# "3 + 3 = 6" would not be matched without a preceding "gleason". We chose
+# this approach because we considered it far worse to collect false alarms than
+# to miss some extractions. Indeed in our study less than 1 % of collected
+# values were false alarms.
+# @codedoc_comment_block study_regexes
+
 # word elements ----------------------------------------------------------------
 # `word_sep` defines what must separates words.
 word_sep = "[ ,-]{1,3}"

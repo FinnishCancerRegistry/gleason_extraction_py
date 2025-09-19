@@ -11,7 +11,42 @@ import utils as geut
 import gleason_extraction_regexes as ger
 
 # extraction funs ---------------------------------------------------------
-
+# @codedoc_comment_block gleason_extraction
+# Gleason score extraction at the Finnish Cancer Registry
+# =======================================================
+#
+# Gleason_extraction_py is a python tool to extract gleason scores from
+# pathology texts. This is python implementation of the original
+# [research project written in R](https://github.com/FinnishCancerRegistry/gleason_extraction)
+# written for the peer-reviewed study
+# "Accurate pattern-based extraction of complex Gleason score expressions from pathology reports"
+# (https://doi.org/10.1016/j.jbi.2021.103850).
+#
+# # Setup
+#
+# ```bash
+# # with this project cloned as a sub-dir of your project
+# cd gleason_extraction_py
+# # optional virtual environment
+# python -m venv .venv
+# ./.venv/Scripts/activate
+#
+# # install deps
+# pip install -r requirements.txt
+# ```
+#
+# # Usage
+#
+# @codedoc_insert_comment_block usage(gleason_extraction)
+#
+# # Interpretation of results
+#
+# @codedoc_insert_comment_block intrepretation(gleason_extraction)
+#
+# # Regular expressions written for the study
+#
+# @codedoc_insert_comment_block study_regexes
+# @codedoc_comment_block gleason_extraction
 def extract_gleason_scores_from_texts(
 		texts : ty.Iterable[None | str],
 		text_ids : None | ty.Iterable[int] = None,
@@ -33,6 +68,31 @@ def extract_gleason_scores_from_texts(
 		`pd.DataFrame`. It has all the columns that the output of
 		`extract_gleason_scores_from_text` has plus column `text_id`.
 	"""
+	# @codedoc_comment_block usage(gleason_extraction)
+	# ```python
+	# import gleason_extraction_py as ge
+	#
+	# ge.extract_gleason_scores_from_texts(
+	# 	texts=["gleason 4 + 3 something something gleason 4 + 4"],
+	# 	patterns=["gleason (?P<A>[3-5])[ +]+(?P<B>[3-5])"],
+	# 	match_types=["a + b"]
+	# )
+	#
+  #    text_id  obs_id  a  b     t     c  start  stop match_type warning
+  # 0        0       0  4  3  <NA>  <NA>      0    13      a + b    None
+  # 1        0       1  4  4  <NA>  <NA>     34    47      a + b    None
+	# ```
+	# @codedoc_comment_block usage(gleason_extraction)
+
+	# @codedoc_comment_block intrepretation(gleason_extraction)
+	# @codedoc_insert_comment_block intrepretation(extract_gleason_scores_from_texts)
+	# @codedoc_comment_block intrepretation(gleason_extraction)
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_texts)
+	# `extract_gleason_scores_from_texts` simply calls
+	# `extract_gleason_scores_from_text` for each `texts` element.
+	#
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_texts)
+
 	if not isinstance(texts, ty.Iterable):
 		raise TypeError("Arg `texts` must be Iterable")
 	if not isinstance(text_ids, (ty.Iterable, type(None))):
@@ -107,9 +167,36 @@ def extract_gleason_scores_from_text(
 				More than one warning are concatenated into one string via
 				`"; ".join(x)`. I think this is these days always `None`.
 	"""
+	# @codedoc_comment_block usage(gleason_extraction)
+	#
+	# ```python
+	# import gleason_extraction_py as ge
+	#
+	# ge.extract_gleason_scores_from_text(
+	# 	text="gleason 4 + 3 something something gleason 4 + 4",
+	# 	patterns=["gleason (?P<A>[3-5])[ +]+(?P<B>[3-5])"],
+	# 	match_types=["a + b"]
+	# )
+	#
+	# 	 obs_id  a  b     t     c  start  stop match_type warning
+	# 0       0  4  3  <NA>  <NA>      0    13      a + b    None
+	# 1       1  4  4  <NA>  <NA>     34    47      a + b    None
+	# ```
+	# @codedoc_comment_block usage(gleason_extraction)
 	assert isinstance(text, (str, type(None))),\
 		"Arg `text` was not `str` nor `None` but %s" % str(type(text))
 	
+	# @codedoc_comment_block intrepretation(gleason_extraction)
+	# @codedoc_insert_comment_block intrepretation(extract_gleason_scores_from_text)
+	# @codedoc_comment_block intrepretation(gleason_extraction)
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+	# `extract_gleason_scores_from_text` performs the following steps:
+	#
+	# - Create a `dict` of `list` objects, object `out`.
+	#   These `list` objects will be populated
+	#   during extraction and each `list` is a column in the resulting
+	#   `pd.DataFrame`.
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 	out : dict[str, list[int | str | None] | pd.Series] = { # type: ignore
 		"obs_id": [],
 		"a": [],
@@ -132,38 +219,68 @@ def extract_gleason_scores_from_text(
 		"match_type": "str",
 		"warning": "str"
 	}
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+	# - If `pd.isna(text)`, return a `pd.DataFrame` with zero rows (but the same
+	#   columns as always).
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 	if pd.isna(text):
 		for col_nm in out_dtype_dict:
 			out[col_nm] = pd.Series(out[col_nm], dtype=out_dtype_dict[col_nm])
 		return pd.DataFrame(out)
 
-	value_type_space = ["A", "B", "T", "C"]
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+	# - Compile `patterns` by passing each element to `regex.compile`.
+	#   At least with `regex` 2.5.161 this also works for pre-compiled
+	#   regexes, so `patterns` can contain either `str` or `regex.Pattern`
+	#   type elements.
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 	compiled_patterns = list(map(re.compile, patterns))
 	if match_types is None:
 		match_types : list[None | str] = [None] * len(compiled_patterns)
+	value_type_space = ["A", "B", "T", "C"]
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+	# - Run `prepare_text` on `text`.
+	# @codedoc_insert_comment_block intrepretation(prepare_text)
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 	text = geut.prepare_text(text)
 	for cp, cp_type in zip(compiled_patterns, match_types):
 		for m in cp.finditer(text):
+			# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+			# - For each match of each compiled pattern:
+			#   + Collect named capture groups with `regex.capturesdict` into object
+			#     `cd`. E.g. `"gleason 3 + 4"` -> `cd = {"A": ["3"], "B": ["4"]}` and
+			#     `"gleason 3 + 4 / 4 + 4"` -> `cd = {"A": ["3", "4"], "B": ["4", "4"]}`.
+			# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 			ms = m.span()
 			text = text[:ms[0]] + "_" * (ms[1] - ms[0]) + text[ms[1]:]
 			cd = m.capturesdict()
 			if "A_and_B" in cd.keys() and not cd["A_and_B"] is None:
-				# this handles regexes which capture e.g.
-				# "sample was entirely grade 3", meaning 3 + 3.
-				# from the example above, 3 needs to be extracted by named capture
-				# group `A_and_B`.
+				# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+				#   + If named group `A_and_B` was extracted,
+				#     replace `cd = {"A": cd["A_and_B"], "B": cd["A_and_B"]}`.
+				#     This enables to correctly collect e.g.
+				#     "sample was entirely gleason grade 3" as
+				#     `cd = {"A": ["3"], "B": ["3"]}`.
+				# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 				cd = {
 					"A": cd["A_and_B"],
 					"B": cd["A_and_B"]
 				}
-			# e.g. cd = {"A": [3, 3], "B": [3, 4]} when text was
-			# "gleason 3 + 3 / 3 + 4"
+				
+			# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+			#   + Append each collected value of each element type into the correct
+			#    `list` in `out`. E.g. `out["A"].append(int("3"))`.
+			# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 			value_type_set = list(np.intersect1d(value_type_space, list(cd.keys())))
 			for elem_nm in value_type_set:
 				for value in cd[elem_nm]:
 					out[elem_nm.lower()].append(int(value))
-			# now e.g. [3, 3] has been appended to out["a"] and [3, 4] to out["b"].
-			# then the other columns.
+			# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+			#   + Pad the other columns with `None` values so all `list` objects in
+			#     `out` are again the same length --- except `start` and `stop`
+			#     get the start and stop positions of the match and `match_type` gets
+			#     the corresponding `match_types` element of the current pattern.
+			# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 			n_add = len(out[value_type_set[0].lower()]) - len(out["start"])
 			for _ in range(n_add):
 				null_value_col_nm_set = [
@@ -185,12 +302,21 @@ def extract_gleason_scores_from_text(
 				out["obs_id"].append(None)
 				out["warning"].append(None)
 				out["match_type"].append(cp_type)
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+	# - After looping through all matches of all the compiled patterns, turn
+	#   `out` into a `pd.DataFrame` with the correct column types and sort its
+	#   rows by column `start`.
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 	value_col_nm_space = [x.lower() for x in value_type_space]
 	for col_nm in out_dtype_dict:
 		out[col_nm] = pd.Series(out[col_nm], dtype=out_dtype_dict[col_nm])
 	out : pd.DataFrame = pd.DataFrame(out)
 	out.sort_values(by=["start", "stop"], inplace=True)
 	out.reset_index(drop=True, inplace=True)
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+	# - Populate column `warning` by calling `make_column_warning`.
+	# @codedoc_insert_comment_block intrepretation(make_column_warning)
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 	out["warning"] = geut.make_column_warning(
 		match_types=out["match_type"],
 		a=out["a"],
@@ -201,6 +327,15 @@ def extract_gleason_scores_from_text(
 
 	is_orphan = out.loc[:, value_col_nm_space].notnull().sum(axis=1) == 1
 	if is_orphan.sum() > 1:
+		# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+		# - If more than one row in `out` is an "orphan" --- A, B, T, or C alone
+		#   with other value columns missing --- then
+		#   `determine_element_combinations` is called on those "orphan" rows and
+		#   `out` is re-cast into a form where combined orphan values now appear
+		#   on the same rows. E.g. `A = 3` and `B = 4` on separate rows may
+		#   now appear on the same row.
+		# @codedoc_insert_comment_block intrepretation(determine_element_combinations)
+		# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 		nonorphan_df = out.loc[~is_orphan, :]
 		orphan_df = out.loc[is_orphan, :].copy()
 		orphan_df.reset_index(inplace=True, drop=True)
@@ -226,6 +361,10 @@ def extract_gleason_scores_from_text(
 		# a = [4], b = [3], start = [8], stop = [39]
 		out = pd.concat([nonorphan_df, orphan_df])
 	
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
+	# - Once more sort the rows in `out` by `start`. Populate `obs_id` with
+	#   a running number starting from zero. Return `out`.
+	# @codedoc_comment_block intrepretation(extract_gleason_scores_from_text)
 	out.sort_values(by=["start", "stop"], inplace=True)
 	out.reset_index(inplace=True, drop=True)
 	out["obs_id"] = np.arange(out.shape[0])
