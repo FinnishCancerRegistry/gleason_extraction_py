@@ -132,7 +132,7 @@ def extract_gleason_scores_from_text(
 		"match_type": "str",
 		"warning": "str"
 	}
-	if text is None:
+	if pd.isna(text):
 		for col_nm in out_dtype_dict:
 			out[col_nm] = pd.Series(out[col_nm], dtype=out_dtype_dict[col_nm])
 		return pd.DataFrame(out)
